@@ -30,12 +30,22 @@
 .combo-box .list-cell, .text-field { -fx-text-fill: #152725; }
 .practice-path-area { -fx-background-color: rgba(5,18,17,.72); -fx-background-radius: 14; -fx-padding: 10 14; -fx-border-color: #315a54; -fx-border-radius: 14; }
 .practice-path-scroll, .practice-path-scroll > .viewport { -fx-background-color: transparent; }
-.practice-path-scroll { -fx-pref-height: 84; -fx-background-insets: 0; -fx-padding: 0; -fx-border-width: 0; }
-.path-pose { -fx-min-width: 126; -fx-pref-width: 126; -fx-min-height: 62; -fx-padding: 7 10; -fx-background-color: #294642; -fx-background-radius: 9; -fx-border-color: transparent; -fx-border-radius: 9; }
+.practice-path-scroll { -fx-pref-height: 94; -fx-background-insets: 0; -fx-padding: 0; -fx-border-width: 0; }
+.path-pose { -fx-min-width: 126; -fx-pref-width: 126; -fx-min-height: 72; -fx-padding: 7 10; -fx-background-color: #294642; -fx-background-radius: 9; -fx-border-color: transparent; -fx-border-radius: 9; }
 .path-pose.current { -fx-background-color: #f2c66f; -fx-border-color: #fff1c9; -fx-border-width: 2; }
 .path-pose.complete { -fx-background-color: #315a54; }
 .path-marker { -fx-font-size: 9px; -fx-font-weight: 700; -fx-text-fill: #f0c77e; }
 .path-name { -fx-font-size: 13px; -fx-font-weight: 700; -fx-text-fill: #ffffff; }
 .path-duration { -fx-font-size: 10px; -fx-text-fill: #bcd0ca; }
+.path-visual-status { -fx-font-size: 8px; -fx-font-weight: 700; -fx-text-fill: #9fcfc4; }
 .path-pose.current .label { -fx-text-fill: #102523; }
 .path-arrow { -fx-font-size: 22px; -fx-text-fill: #8dd7c6; -fx-padding: 16 0 0 0; }
+.teaching-view { -fx-background-color: #f5efe1; -fx-background-radius: 16; -fx-padding: 18 22; -fx-border-color: #d6c79e; -fx-border-radius: 16; -fx-border-width: 2; }
+.teaching-view .badge { -fx-text-fill: #725b25; }
+.teaching-pose-name { -fx-font-size: 27px; -fx-font-weight: 700; -fx-text-fill: #173532; }
+.teaching-instruction { -fx-font-size: 18px; -fx-text-fill: #173532; }
+.teaching-review { -fx-font-size: 13px; -fx-text-fill: #53625e; }
+.visual-review-warning { -fx-background-color: #fff2ca; -fx-background-radius: 8; -fx-padding: 10; -fx-text-fill: #493a16; -fx-font-weight: 700; }
+.visual-approved { -fx-background-color: #d8efe8; -fx-background-radius: 8; -fx-padding: 10; -fx-text-fill: #173532; -fx-font-weight: 700; }
+.camera-observation { -fx-background-color: #091817; -fx-background-radius: 14; -fx-border-color: #315a54; -fx-border-radius: 14; -fx-border-width: 2; }
+.observation-title { -fx-font-size: 10px; -fx-font-weight: 700; -fx-text-fill: #b7c8c5; }

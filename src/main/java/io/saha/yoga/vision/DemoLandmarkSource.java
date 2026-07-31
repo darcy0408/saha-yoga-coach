@@ -189,5 +189,5 @@ public final class DemoLandmarkSource implements LandmarkSource {
     private void put(EnumMap<LandmarkName, Landmark> map, LandmarkName name, double x, double y) {
         map.put(name, new Landmark(x, y, confidence()));
     }
-    @Override public String description() { return "Demo landmarks · " + poseId.replace('_', ' '); }
+    @Override public String description() { return "Observed landmarks · synthetic demo · not instruction"; }
 }

@@ -2,6 +2,7 @@ package io.saha.yoga;
 
 import io.saha.yoga.analysis.*;
 import io.saha.yoga.domain.*;
+import io.saha.yoga.illustration.PoseIllustrationRegistry;
 import io.saha.yoga.personalization.PersonalizationEngine;
 import io.saha.yoga.routine.*;
 import io.saha.yoga.storage.*;
@@ -32,6 +33,7 @@ public final class SahaApp extends Application {
     private final RoutineGenerator generator = new RoutineGenerator(catalog);
     private final PoseAnalyzer analyzer = new PoseAnalyzer();
     private final LandmarkSource landmarks = new DemoLandmarkSource();
+    private final PoseIllustrationRegistry illustrations = new PoseIllustrationRegistry();
     private final SessionStore store = new JsonSessionStore(Path.of(System.getProperty("user.home"), ".saha", "sessions.json"));
     private Stage stage;
     private Routine routine;
@@ -41,6 +43,7 @@ public final class SahaApp extends Application {
     private Timeline clock;
     private Label poseLabel, phaseLabel, statusLabel, suggestionLabel, optionalLabel, confidenceLabel, timerLabel;
     private Pane bodyView;
+    private VBox teachingView;
     private HBox practicePath;
     private ScrollPane practicePathScroll;
 
@@ -105,7 +108,8 @@ public final class SahaApp extends Application {
     private void showCoach() {
         poseLabel = new Label(); poseLabel.setWrapText(true); poseLabel.setMinHeight(Region.USE_PREF_SIZE); poseLabel.getStyleClass().add("hero-small"); phaseLabel = new Label(); phaseLabel.getStyleClass().add("badge");
         statusLabel = new Label(); statusLabel.getStyleClass().add("status"); suggestionLabel = wrapLabel(); optionalLabel = wrapLabel(); confidenceLabel = new Label(); timerLabel = new Label(); timerLabel.getStyleClass().add("timer");
-        bodyView = createBodyView(); bodyView.setPrefSize(560, 500); bodyView.getStyleClass().add("camera");
+        teachingView = new VBox(10); teachingView.setPrefSize(560, 270); teachingView.getStyleClass().add("teaching-view");
+        bodyView = createBodyView(); bodyView.setPrefSize(560, 205); bodyView.getStyleClass().add("camera-observation");
         var stop = actionButton("Stop now"); stop.getStyleClass().add("danger"); stop.setOnAction(e -> finish(false));
         var pause = actionButton("Pause"); pause.setOnAction(e -> { paused = !paused; pause.setText(paused ? "Resume" : "Pause"); });
         var repeat = actionButton("Repeat cue"); repeat.setOnAction(e -> suggestionLabel.requestFocus());
@@ -120,7 +124,10 @@ public final class SahaApp extends Application {
         controls.add(stop, 0, 2, 2, 1);
         var reasonText = wrapLabel(); reasonText.setMinHeight(Region.USE_PREF_SIZE); reasonText.setText(String.join(" ", routine.explanations()));
         var feedback = new VBox(10, phaseLabel, poseLabel, timerLabel, statusLabel, suggestionLabel, optionalLabel, confidenceLabel, new Separator(), new Label("Why this routine changed"), reasonText, controls); feedback.getStyleClass().add("card"); feedback.setMaxWidth(440);
-        var coach = new BorderPane(bodyView, null, feedback, null, null); BorderPane.setMargin(feedback, new Insets(0, 0, 0, 25));
+        var observationTitle = new Label("CAMERA OBSERVATION · SYNTHETIC DEMO · NOT AN EXAMPLE POSE"); observationTitle.getStyleClass().add("observation-title");
+        var observation = new VBox(5, observationTitle, bodyView); VBox.setVgrow(bodyView, Priority.ALWAYS);
+        var visualColumn = new VBox(12, teachingView, observation); VBox.setVgrow(teachingView, Priority.ALWAYS); VBox.setVgrow(observation, Priority.ALWAYS);
+        var coach = new BorderPane(visualColumn, null, feedback, null, null); BorderPane.setMargin(feedback, new Insets(0, 0, 0, 25));
         practicePath = new HBox(8); practicePath.setAlignment(Pos.CENTER_LEFT);
         practicePathScroll = new ScrollPane(practicePath); practicePathScroll.setFitToHeight(true); practicePathScroll.setPannable(true); practicePathScroll.setHbarPolicy(ScrollPane.ScrollBarPolicy.AS_NEEDED); practicePathScroll.setVbarPolicy(ScrollPane.ScrollBarPolicy.NEVER); practicePathScroll.getStyleClass().add("practice-path-scroll");
         var pathTitle = new Label("TODAY'S PRACTICE PATH"); pathTitle.getStyleClass().add("badge");
@@ -168,8 +175,24 @@ public final class SahaApp extends Application {
         landmarks.selectPose(item.pose().id());
         poseLabel.setText("Current pose: " + item.pose().displayName());
         phaseLabel.setText(item.phase().toUpperCase()); timerLabel.setText(format(remaining));
+        updateTeachingView(item);
         updatePracticePath();
         drawFrame(landmarks.nextFrame());
+    }
+    private void updateTeachingView(RoutineItem item) {
+        if (teachingView == null) return;
+        teachingView.getChildren().clear();
+        var heading = new Label("TEACHING GUIDE"); heading.getStyleClass().add("badge");
+        var title = new Label(item.pose().displayName()); title.getStyleClass().add("teaching-pose-name");
+        var instruction = new Label(item.pose().instructions().getFirst()); instruction.setWrapText(true); instruction.getStyleClass().add("teaching-instruction");
+        var status = illustrations.status(item.pose().id());
+        var review = new Label(status.map(value -> value.requiredView() + " · visual " + value.reviewState().name().toLowerCase().replace('_', ' ')).orElse("Written guidance only · illustration not yet reviewed"));
+        review.setWrapText(true); review.getStyleClass().add("teaching-review");
+        var boundary = new Label(illustrations.reviewed(item.pose().id()).isPresent()
+                ? "Reference-validated teaching illustration"
+                : "Illustration under review. Follow the written setup or skip this pose.");
+        boundary.setWrapText(true); boundary.getStyleClass().add(illustrations.reviewed(item.pose().id()).isPresent() ? "visual-approved" : "visual-review-warning");
+        teachingView.getChildren().addAll(heading, title, instruction, review, boundary);
     }
     private void updatePracticePath() {
         if (practicePath == null) return;
@@ -183,7 +206,8 @@ public final class SahaApp extends Application {
             var marker = new Label(i == itemIndex ? "YOU ARE HERE" : item.phase().toUpperCase()); marker.getStyleClass().add("path-marker");
             var name = new Label(item.pose().displayName()); name.setWrapText(true); name.getStyleClass().add("path-name");
             var duration = new Label(format(item.durationSeconds())); duration.getStyleClass().add("path-duration");
-            var card = new VBox(2, marker, name, duration); card.getStyleClass().add("path-pose");
+            var visualStatus = new Label(illustrations.reviewed(item.pose().id()).isPresent() ? "VALIDATED VISUAL" : "WRITTEN GUIDE"); visualStatus.getStyleClass().add("path-visual-status");
+            var card = new VBox(2, marker, name, duration, visualStatus); card.getStyleClass().add("path-pose");
             if (i < itemIndex) card.getStyleClass().add("complete");
             if (i == itemIndex) card.getStyleClass().add("current");
             practicePath.getChildren().add(card);
@@ -213,11 +237,11 @@ public final class SahaApp extends Application {
     }
     private VBox stat(String label, String value) { var number = new Label(value); number.getStyleClass().add("stat-number"); var box = new VBox(7, new Label(label), number); box.getStyleClass().add("card"); HBox.setHgrow(box, Priority.ALWAYS); return box; }
 
-    private Pane createBodyView() { var pane = new Pane(); pane.setMinSize(420, 380); return pane; }
+    private Pane createBodyView() { var pane = new Pane(); pane.setMinSize(420, 180); return pane; }
     private void drawFrame(LandmarkFrame frame) {
         if (bodyView == null) return;
         bodyView.getChildren().clear();
-        double w = Math.max(420, bodyView.getWidth()), h = Math.max(380, bodyView.getHeight());
+        double w = Math.max(420, bodyView.getWidth()), h = Math.max(180, bodyView.getHeight());
         double scale = Math.min(w, h);
         double offsetX = (w - scale) / 2;
         double offsetY = (h - scale) / 2;
