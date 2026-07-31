@@ -33,6 +33,7 @@ public final class SahaApp extends Application {
     private Stage stage;
     private Routine routine;
     private int itemIndex, remaining;
+    private int clockTicks;
     private boolean paused;
     private Timeline clock;
     private Label poseLabel, phaseLabel, statusLabel, suggestionLabel, optionalLabel, confidenceLabel, timerLabel;
@@ -116,14 +117,24 @@ public final class SahaApp extends Application {
         var feedback = new VBox(10, phaseLabel, poseLabel, timerLabel, statusLabel, suggestionLabel, optionalLabel, confidenceLabel, new Separator(), new Label("Why this routine changed"), reasonText, controls); feedback.getStyleClass().add("card"); feedback.setMaxWidth(440);
         var page = new BorderPane(bodyView, null, feedback, null, null); page.setPadding(new Insets(35)); BorderPane.setMargin(feedback, new Insets(0, 0, 0, 25)); page.getStyleClass().add("page");
         setPage(page); updatePose();
-        clock = new Timeline(new KeyFrame(Duration.seconds(1), e -> tick())); clock.setCycleCount(Timeline.INDEFINITE); clock.play();
+        clockTicks = 0;
+        clock = new Timeline(new KeyFrame(Duration.millis(100), e -> tick())); clock.setCycleCount(Timeline.INDEFINITE); clock.play();
     }
 
     private Label wrapLabel() { var label = new Label(); label.setWrapText(true); return label; }
     private Button actionButton(String text) { var button = new Button(text); button.setMaxWidth(Double.MAX_VALUE); return button; }
     private RoutineItem current() { return routine.items().get(itemIndex); }
     private void tick() {
-        var frame = landmarks.nextFrame(); drawFrame(frame); var result = analyzer.analyze(current().pose(), frame);
+        var frame = landmarks.nextFrame(); drawFrame(frame);
+        if (landmarks.isTransitioning()) {
+            statusLabel.setText("Status: Moving into " + current().pose().displayName());
+            suggestionLabel.setText("Primary suggestion: Move slowly and use support if you need it.");
+            optionalLabel.setText("The hold begins when the transition finishes.");
+            confidenceLabel.setText("Analysis: Paused during transition");
+            timerLabel.setText(format(remaining) + " · transition");
+            return;
+        }
+        var result = analyzer.analyze(current().pose(), frame);
         boolean reliable = result instanceof AnalysisResult.Reliable;
         switch (result) {
             case AnalysisResult.Reliable r -> {
@@ -137,7 +148,7 @@ public final class SahaApp extends Application {
                 optionalLabel.setText("Corrections are paused until the view improves."); confidenceLabel.setText("Confidence: Low");
             }
         }
-        if (!paused && reliable && --remaining <= 0) advance(false);
+        if (!paused && reliable && ++clockTicks % 10 == 0 && --remaining <= 0) advance(false);
         timerLabel.setText(format(remaining) + (paused || !reliable ? " · paused" : ""));
     }
     private String level(double value) { return value >= .85 ? "High" : value >= .70 ? "Medium" : "Low"; }
@@ -197,14 +208,24 @@ public final class SahaApp extends Application {
         var neck = new Line(headCenterX+(dx/distance)*headRadius, headCenterY+(dy/distance)*headRadius, shoulderX, shoulderY);
         neck.setStroke(Color.web("#8dd7c6")); neck.setStrokeWidth(5);
         bodyView.getChildren().addAll(neck, head);
-        double eyeY = headCenterY-headRadius*.18;
-        var leftEye = new Circle(headCenterX-headRadius*.32, eyeY, 2.4, Color.web("#f4c77a"));
-        var rightEye = new Circle(headCenterX+headRadius*.32, eyeY, 2.4, Color.web("#f4c77a"));
-        var noseMark = new Circle(headCenterX, headCenterY+headRadius*.05, 2.2, Color.web("#f4c77a"));
-        var mouth = new Line(headCenterX-headRadius*.24, headCenterY+headRadius*.34, headCenterX+headRadius*.24, headCenterY+headRadius*.34);
-        mouth.setStroke(Color.web("#f4c77a")); mouth.setStrokeWidth(2);
-        bodyView.getChildren().addAll(leftEye, rightEye, noseMark, mouth);
+        drawFace(headCenterX, headCenterY, headRadius, landmarks.faceDirection());
         var label = new Text(18, 28, landmarks.description()); label.setFill(Color.web("#b7c8c5")); bodyView.getChildren().add(label);
+    }
+
+    private void drawFace(double x, double y, double radius, FaceDirection direction) {
+        var color = Color.web("#f4c77a");
+        if (direction == FaceDirection.FRONT) {
+            bodyView.getChildren().addAll(new Circle(x-radius*.32,y-radius*.18,2.4,color), new Circle(x+radius*.32,y-radius*.18,2.4,color));
+            var nose = new Circle(x,y+radius*.05,2.2,color);
+            var mouth = new Line(x-radius*.24,y+radius*.34,x+radius*.24,y+radius*.34); mouth.setStroke(color); mouth.setStrokeWidth(2);
+            bodyView.getChildren().addAll(nose,mouth); return;
+        }
+        double vx = direction==FaceDirection.LEFT?-1:direction==FaceDirection.RIGHT?1:0;
+        double vy = direction==FaceDirection.UP?-1:direction==FaceDirection.DOWN?1:0;
+        var eye = new Circle(x+vx*radius*.20-vy*radius*.10,y+vy*radius*.20+vx*radius*.10,2.5,color);
+        var nose = new Line(x+vx*radius*.55,y+vy*radius*.55,x+vx*radius*.78,y+vy*radius*.78); nose.setStroke(color); nose.setStrokeWidth(2.5);
+        var mouth = new Line(x+vx*radius*.42-vy*radius*.15,y+vy*radius*.42+vx*radius*.15,x+vx*radius*.42+vy*radius*.15,y+vy*radius*.42-vx*radius*.15); mouth.setStroke(color); mouth.setStrokeWidth(2);
+        bodyView.getChildren().addAll(eye,nose,mouth);
     }
 
     @Override public void stop() { if (clock != null) clock.stop(); landmarks.close(); }

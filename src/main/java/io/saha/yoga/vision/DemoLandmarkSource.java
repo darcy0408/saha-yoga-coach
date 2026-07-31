@@ -3,15 +3,36 @@ package io.saha.yoga.vision;
 import io.saha.yoga.domain.*;
 import java.time.Instant;
 import java.util.EnumMap;
+import java.util.Map;
 
 public final class DemoLandmarkSource implements LandmarkSource {
     private long frame;
     private String poseId = "mountain";
-    @Override public void selectPose(String poseId) { this.poseId = poseId; }
+    private EnumMap<LandmarkName, Landmark> displayed;
+    private EnumMap<LandmarkName, Landmark> transitionFrom;
+    private EnumMap<LandmarkName, Landmark> target;
+    private long transitionStarted;
+    private FaceDirection facing = FaceDirection.FRONT;
+    @Override public void selectPose(String poseId) {
+        transitionFrom = displayed == null ? build(this.poseId) : new EnumMap<>(displayed);
+        this.poseId = poseId;
+        facing = facingFor(poseId);
+        target = build(poseId);
+        transitionStarted = System.nanoTime();
+    }
     @Override public LandmarkFrame nextFrame() {
+        if (target == null) target = build(poseId);
+        double progress = Math.min(1, (System.nanoTime()-transitionStarted)/3_000_000_000.0);
+        double eased = progress*progress*(3-2*progress);
+        displayed = interpolate(transitionFrom == null ? target : transitionFrom, target, eased);
+        constrain(displayed, facing);
+        frame++;
+        return new LandmarkFrame(Instant.now(), displayed);
+    }
+    private EnumMap<LandmarkName, Landmark> build(String id) {
         var points = new EnumMap<LandmarkName, Landmark>(LandmarkName.class);
         standing(points);
-        switch (poseId) {
+        switch (id) {
             case "chair" -> chair(points);
             case "warrior_one" -> warriorOne(points);
             case "warrior_two" -> warriorTwo(points);
@@ -25,9 +46,52 @@ public final class DemoLandmarkSource implements LandmarkSource {
             case "rest" -> rest(points);
             default -> { }
         }
-        frame++;
-        return new LandmarkFrame(Instant.now(), points);
+        constrain(points, facingFor(id));
+        return points;
     }
+    private EnumMap<LandmarkName, Landmark> interpolate(Map<LandmarkName, Landmark> from, Map<LandmarkName, Landmark> to, double amount) {
+        var result = new EnumMap<LandmarkName, Landmark>(LandmarkName.class);
+        to.forEach((name,end) -> { var start=from.getOrDefault(name,end); result.put(name,new Landmark(start.x()+(end.x()-start.x())*amount,start.y()+(end.y()-start.y())*amount,confidence())); });
+        return result;
+    }
+    @Override public boolean isTransitioning() { return target != null && (System.nanoTime()-transitionStarted) < 3_000_000_000L; }
+    @Override public FaceDirection faceDirection() { return facing; }
+    LandmarkFrame targetFrame() { return new LandmarkFrame(Instant.now(), target == null ? build(poseId) : target); }
+    private FaceDirection facingFor(String id) { return switch(id) {
+        case "warrior_two", "triangle", "cat_cow", "bird_dog", "chair" -> FaceDirection.LEFT;
+        case "seated_fold" -> FaceDirection.RIGHT;
+        case "bridge", "rest" -> FaceDirection.UP;
+        case "low_lunge" -> FaceDirection.LEFT;
+        default -> FaceDirection.FRONT;
+    }; }
+
+    private void constrain(EnumMap<LandmarkName, Landmark> p, FaceDirection view) {
+        var raw = new EnumMap<>(p);
+        boolean side = view != FaceDirection.FRONT;
+        var hipCenter = midpoint(raw.get(LandmarkName.LEFT_HIP),raw.get(LandmarkName.RIGHT_HIP));
+        var shoulderCenterRaw = midpoint(raw.get(LandmarkName.LEFT_SHOULDER),raw.get(LandmarkName.RIGHT_SHOULDER));
+        var shoulderCenter = extend(hipCenter,shoulderCenterRaw,.24);
+        placePair(p,LandmarkName.LEFT_HIP,LandmarkName.RIGHT_HIP,hipCenter,raw.get(LandmarkName.LEFT_HIP),raw.get(LandmarkName.RIGHT_HIP),side?.04:.10);
+        placePair(p,LandmarkName.LEFT_SHOULDER,LandmarkName.RIGHT_SHOULDER,shoulderCenter,raw.get(LandmarkName.LEFT_SHOULDER),raw.get(LandmarkName.RIGHT_SHOULDER),side?.05:.17);
+        chain(p,raw,LandmarkName.LEFT_SHOULDER,LandmarkName.LEFT_ELBOW,LandmarkName.LEFT_WRIST,LandmarkName.LEFT_HAND,.15,.14,.055);
+        chain(p,raw,LandmarkName.RIGHT_SHOULDER,LandmarkName.RIGHT_ELBOW,LandmarkName.RIGHT_WRIST,LandmarkName.RIGHT_HAND,.15,.14,.055);
+        chain(p,raw,LandmarkName.LEFT_HIP,LandmarkName.LEFT_KNEE,LandmarkName.LEFT_ANKLE,LandmarkName.LEFT_TOE,.23,.22,.08);
+        chain(p,raw,LandmarkName.RIGHT_HIP,LandmarkName.RIGHT_KNEE,LandmarkName.RIGHT_ANKLE,LandmarkName.RIGHT_TOE,.23,.22,.08);
+        p.put(LandmarkName.NOSE,withConfidence(extend(shoulderCenter,raw.get(LandmarkName.NOSE),.13)));
+    }
+    private void placePair(EnumMap<LandmarkName, Landmark> p,LandmarkName left,LandmarkName right,Landmark center,Landmark rawLeft,Landmark rawRight,double width){
+        double dx=rawRight.x()-rawLeft.x(),dy=rawRight.y()-rawLeft.y(),length=Math.max(.001,Math.hypot(dx,dy));
+        p.put(left,new Landmark(center.x()-dx/length*width/2,center.y()-dy/length*width/2,confidence()));
+        p.put(right,new Landmark(center.x()+dx/length*width/2,center.y()+dy/length*width/2,confidence()));
+    }
+    private void chain(EnumMap<LandmarkName, Landmark> p,Map<LandmarkName, Landmark> raw,LandmarkName root,LandmarkName joint,LandmarkName end,LandmarkName tip,double first,double second,double third){
+        var a=p.get(root); var b=extend(a,raw.get(joint),first); var c=extend(b,raw.get(end),second); var d=extend(c,raw.get(tip),third);
+        p.put(joint,withConfidence(b));p.put(end,withConfidence(c));p.put(tip,withConfidence(d));
+    }
+    private Landmark midpoint(Landmark a,Landmark b){return new Landmark((a.x()+b.x())/2,(a.y()+b.y())/2,confidence());}
+    private Landmark extend(Landmark from,Landmark toward,double distance){double dx=toward.x()-from.x(),dy=toward.y()-from.y(),length=Math.max(.001,Math.hypot(dx,dy));return new Landmark(from.x()+dx/length*distance,from.y()+dy/length*distance,confidence());}
+    private Landmark withConfidence(Landmark p){return new Landmark(p.x(),p.y(),confidence());}
+    private double confidence(){return frame%300>=290?.55:.94;}
     private void standing(EnumMap<LandmarkName, Landmark> p) {
         at(p, LandmarkName.NOSE,.50,.10); shoulders(p,.42,.21,.58,.21); arms(p,.40,.40,.39,.58,.60,.40,.61,.58);
         hips(p,.46,.48,.54,.48); legs(p,.46,.70,.45,.88,.54,.70,.55,.88); toes(p,.39,.89,.61,.89);
@@ -97,7 +161,7 @@ public final class DemoLandmarkSource implements LandmarkSource {
     private void toes(EnumMap<LandmarkName, Landmark> p,double lx,double ly,double rx,double ry){at(p,LandmarkName.LEFT_TOE,lx,ly);at(p,LandmarkName.RIGHT_TOE,rx,ry);}
     private void at(EnumMap<LandmarkName, Landmark> p, LandmarkName name,double x,double y){ put(p,name,x,y); }
     private void put(EnumMap<LandmarkName, Landmark> map, LandmarkName name, double x, double y) {
-        map.put(name, new Landmark(x, y, frame % 30 == 29 ? .55 : .94));
+        map.put(name, new Landmark(x, y, confidence()));
     }
     @Override public String description() { return "Demo landmarks · " + poseId.replace('_', ' '); }
 }
