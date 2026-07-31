@@ -1,0 +1,21 @@
+.root { -fx-font-family: "Segoe UI", sans-serif; -fx-font-size: 15px; -fx-background-color: #102523; -fx-text-fill: #eaf4f0; }
+.label { -fx-text-fill: #dce9e5; }
+.page { -fx-background-color: linear-gradient(to bottom right, #102523, #173532); }
+.hero { -fx-font-size: 48px; -fx-font-weight: 700; -fx-text-fill: #f7faf6; }
+.hero-small { -fx-font-size: 31px; -fx-font-weight: 700; -fx-text-fill: #f7faf6; }
+.title { -fx-font-size: 34px; -fx-font-weight: 700; }
+.lead { -fx-font-size: 19px; -fx-text-fill: #bcd0ca; }
+.card { -fx-background-color: rgba(255,255,255,.08); -fx-background-radius: 16; -fx-padding: 22; -fx-border-color: rgba(255,255,255,.10); -fx-border-radius: 16; }
+.camera { -fx-background-color: #091817; -fx-background-radius: 20; -fx-border-color: #315a54; -fx-border-radius: 20; -fx-border-width: 2; }
+.button { -fx-background-color: #315a54; -fx-text-fill: white; -fx-background-radius: 9; -fx-padding: 11 16; -fx-cursor: hand; }
+.button:hover { -fx-background-color: #40736b; }
+.primary { -fx-background-color: #e9b968; -fx-text-fill: #142522; -fx-font-weight: 700; }
+.danger { -fx-background-color: #9f4646; -fx-font-weight: 700; }
+.badge { -fx-text-fill: #f0c77e; -fx-font-size: 12px; -fx-font-weight: 700; }
+.notice { -fx-background-color: rgba(233,185,104,.12); -fx-padding: 14; -fx-background-radius: 9; }
+.check { -fx-text-fill: #8dd7c6; -fx-font-weight: 700; }
+.field-label { -fx-font-weight: 700; }
+.status { -fx-font-size: 20px; -fx-font-weight: 700; }
+.timer { -fx-font-size: 28px; -fx-text-fill: #f0c77e; }
+.stat-number { -fx-font-size: 28px; -fx-font-weight: 700; -fx-text-fill: #8dd7c6; }
+.text-field, .combo-box, .slider { -fx-font-size: 15px; }

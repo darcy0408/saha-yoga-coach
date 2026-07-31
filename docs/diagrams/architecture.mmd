@@ -1,0 +1,15 @@
+flowchart LR
+  UI[JavaFX onboarding / coach / progress]
+  SRC[Camera adapter or demo landmarks]
+  GATE{Required landmarks >= 0.70}
+  GUIDE[Framing guidance; timer paused]
+  ANALYZE[Joint angles and flexible ranges]
+  COACH[At most two supportive cues]
+  METRICS[Derived session metrics only]
+  STORE[Local JSON]
+  PERSONAL[Explainable personalization]
+  SRC --> GATE
+  GATE -- no --> GUIDE --> UI
+  GATE -- yes --> ANALYZE --> COACH --> UI
+  UI --> METRICS --> STORE --> PERSONAL --> UI
+
