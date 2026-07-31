@@ -97,7 +97,7 @@ public final class SahaApp extends Application {
     }
 
     private void showCoach() {
-        poseLabel = new Label(); poseLabel.getStyleClass().add("hero-small"); phaseLabel = new Label(); phaseLabel.getStyleClass().add("badge");
+        poseLabel = new Label(); poseLabel.setWrapText(true); poseLabel.setMinHeight(Region.USE_PREF_SIZE); poseLabel.getStyleClass().add("hero-small"); phaseLabel = new Label(); phaseLabel.getStyleClass().add("badge");
         statusLabel = new Label(); statusLabel.getStyleClass().add("status"); suggestionLabel = wrapLabel(); optionalLabel = wrapLabel(); confidenceLabel = new Label(); timerLabel = new Label(); timerLabel.getStyleClass().add("timer");
         bodyView = createBodyView(); bodyView.setPrefSize(560, 500); bodyView.getStyleClass().add("camera");
         var stop = actionButton("Stop now"); stop.getStyleClass().add("danger"); stop.setOnAction(e -> finish(false));
@@ -112,7 +112,8 @@ public final class SahaApp extends Application {
         controls.add(pause, 0, 0); controls.add(repeat, 1, 0);
         controls.add(easier, 0, 1); controls.add(next, 1, 1);
         controls.add(stop, 0, 2, 2, 1);
-        var feedback = new VBox(10, phaseLabel, poseLabel, timerLabel, statusLabel, suggestionLabel, optionalLabel, confidenceLabel, new Separator(), new Label("Why this routine changed"), new Label(String.join(" ", routine.explanations())), controls); feedback.getStyleClass().add("card"); feedback.setMaxWidth(440);
+        var reasonText = wrapLabel(); reasonText.setMinHeight(Region.USE_PREF_SIZE); reasonText.setText(String.join(" ", routine.explanations()));
+        var feedback = new VBox(10, phaseLabel, poseLabel, timerLabel, statusLabel, suggestionLabel, optionalLabel, confidenceLabel, new Separator(), new Label("Why this routine changed"), reasonText, controls); feedback.getStyleClass().add("card"); feedback.setMaxWidth(440);
         var page = new BorderPane(bodyView, null, feedback, null, null); page.setPadding(new Insets(35)); BorderPane.setMargin(feedback, new Insets(0, 0, 0, 25)); page.getStyleClass().add("page");
         setPage(page); updatePose();
         clock = new Timeline(new KeyFrame(Duration.seconds(1), e -> tick())); clock.setCycleCount(Timeline.INDEFINITE); clock.play();
@@ -172,19 +173,26 @@ public final class SahaApp extends Application {
 
     private Pane createBodyView() { var pane = new Pane(); pane.setMinSize(420, 380); return pane; }
     private void drawFrame(LandmarkFrame frame) {
-        if (bodyView == null) return; bodyView.getChildren().clear(); double w = Math.max(420, bodyView.getWidth()), h = Math.max(380, bodyView.getHeight());
+        if (bodyView == null) return;
+        bodyView.getChildren().clear();
+        double w = Math.max(420, bodyView.getWidth()), h = Math.max(380, bodyView.getHeight());
+        double scale = Math.min(w, h);
+        double offsetX = (w - scale) / 2;
+        double offsetY = (h - scale) / 2;
         var links = List.of(new LandmarkName[]{LandmarkName.LEFT_SHOULDER,LandmarkName.RIGHT_SHOULDER}, new LandmarkName[]{LandmarkName.LEFT_SHOULDER,LandmarkName.LEFT_HIP}, new LandmarkName[]{LandmarkName.RIGHT_SHOULDER,LandmarkName.RIGHT_HIP}, new LandmarkName[]{LandmarkName.LEFT_HIP,LandmarkName.RIGHT_HIP}, new LandmarkName[]{LandmarkName.LEFT_HIP,LandmarkName.LEFT_KNEE}, new LandmarkName[]{LandmarkName.LEFT_KNEE,LandmarkName.LEFT_ANKLE}, new LandmarkName[]{LandmarkName.RIGHT_HIP,LandmarkName.RIGHT_KNEE}, new LandmarkName[]{LandmarkName.RIGHT_KNEE,LandmarkName.RIGHT_ANKLE}, new LandmarkName[]{LandmarkName.LEFT_SHOULDER,LandmarkName.LEFT_ELBOW}, new LandmarkName[]{LandmarkName.LEFT_ELBOW,LandmarkName.LEFT_WRIST}, new LandmarkName[]{LandmarkName.RIGHT_SHOULDER,LandmarkName.RIGHT_ELBOW}, new LandmarkName[]{LandmarkName.RIGHT_ELBOW,LandmarkName.RIGHT_WRIST});
-        for (var link : links) { var a=frame.landmarks().get(link[0]); var b=frame.landmarks().get(link[1]); var line=new Line(a.x()*w,a.y()*h,b.x()*w,b.y()*h); line.setStroke(Color.web("#8dd7c6")); line.setStrokeWidth(5); bodyView.getChildren().add(line); }
-        frame.landmarks().values().forEach(p -> { var circle=new Circle(p.x()*w,p.y()*h,6,Color.web("#f4c77a")); bodyView.getChildren().add(circle); });
+        for (var link : links) { var a=frame.landmarks().get(link[0]); var b=frame.landmarks().get(link[1]); var line=new Line(offsetX+a.x()*scale,offsetY+a.y()*scale,offsetX+b.x()*scale,offsetY+b.y()*scale); line.setStroke(Color.web("#8dd7c6")); line.setStrokeWidth(5); bodyView.getChildren().add(line); }
+        frame.landmarks().values().forEach(p -> { var circle=new Circle(offsetX+p.x()*scale,offsetY+p.y()*scale,6,Color.web("#f4c77a")); bodyView.getChildren().add(circle); });
         var nose = frame.landmarks().get(LandmarkName.NOSE);
         var leftShoulder = frame.landmarks().get(LandmarkName.LEFT_SHOULDER);
         var rightShoulder = frame.landmarks().get(LandmarkName.RIGHT_SHOULDER);
-        double headRadius = Math.max(22, h*.055);
-        double headCenterY = nose.y()*h + headRadius*.35;
-        var head = new Circle(nose.x()*w, headCenterY, headRadius, Color.TRANSPARENT);
+        double headRadius = Math.max(20, scale*.052);
+        double headCenterX = offsetX + nose.x()*scale;
+        double headCenterY = offsetY + nose.y()*scale + headRadius*.30;
+        var head = new Circle(headCenterX, headCenterY, headRadius, Color.TRANSPARENT);
         head.setStroke(Color.web("#8dd7c6")); head.setStrokeWidth(5);
-        var neck = new Line(nose.x()*w, headCenterY + headRadius,
-                ((leftShoulder.x()+rightShoulder.x())/2)*w, ((leftShoulder.y()+rightShoulder.y())/2)*h);
+        var neck = new Line(headCenterX, headCenterY + headRadius,
+                offsetX+((leftShoulder.x()+rightShoulder.x())/2)*scale,
+                offsetY+((leftShoulder.y()+rightShoulder.y())/2)*scale);
         neck.setStroke(Color.web("#8dd7c6")); neck.setStrokeWidth(5);
         bodyView.getChildren().addAll(neck, head);
         var label = new Text(18, 28, landmarks.description()); label.setFill(Color.web("#b7c8c5")); bodyView.getChildren().add(label);

@@ -33,43 +33,51 @@ public final class DemoLandmarkSource implements LandmarkSource {
         hips(p,.46,.48,.54,.48); legs(p,.46,.70,.45,.92,.54,.70,.55,.92);
     }
     private void chair(EnumMap<LandmarkName, Landmark> p) {
-        at(p,LandmarkName.NOSE,.50,.12); shoulders(p,.42,.23,.58,.23); arms(p,.38,.12,.34,.05,.62,.12,.66,.05);
-        hips(p,.42,.52,.52,.52); legs(p,.55,.68,.48,.90,.63,.68,.57,.90);
+        at(p,LandmarkName.NOSE,.39,.14); shoulders(p,.40,.27,.43,.28); arms(p,.34,.16,.37,.05,.37,.16,.40,.05);
+        hips(p,.51,.49,.54,.50); legs(p,.66,.52,.66,.76,.69,.55,.69,.79);
     }
     private void warriorOne(EnumMap<LandmarkName, Landmark> p) {
-        arms(p,.40,.12,.44,.04,.60,.12,.56,.04); hips(p,.45,.48,.55,.48); legs(p,.36,.68,.27,.91,.64,.67,.79,.90);
+        arms(p,.34,.13,.44,.04,.66,.13,.56,.04); hips(p,.46,.48,.54,.48);
+        legs(p,.34,.65,.34,.86,.67,.65,.79,.85);
     }
     private void warriorTwo(EnumMap<LandmarkName, Landmark> p) {
-        arms(p,.29,.22,.16,.22,.71,.22,.84,.22); hips(p,.45,.48,.55,.48); legs(p,.35,.67,.23,.90,.65,.67,.82,.90);
+        arms(p,.29,.21,.16,.21,.71,.21,.84,.21); hips(p,.46,.48,.54,.48);
+        legs(p,.34,.64,.34,.85,.67,.66,.80,.85);
     }
     private void triangle(EnumMap<LandmarkName, Landmark> p) {
-        at(p,LandmarkName.NOSE,.43,.18); shoulders(p,.36,.28,.50,.20); arms(p,.41,.43,.31,.59,.52,.10,.55,.03);
-        hips(p,.45,.49,.55,.46); legs(p,.35,.68,.22,.90,.66,.67,.82,.90);
+        at(p,LandmarkName.NOSE,.29,.24); shoulders(p,.32,.35,.39,.31);
+        arms(p,.30,.49,.29,.63,.45,.20,.50,.08); hips(p,.45,.53,.53,.53);
+        legs(p,.34,.69,.22,.86,.65,.69,.78,.86);
     }
     private void tree(EnumMap<LandmarkName, Landmark> p) {
-        arms(p,.40,.12,.47,.04,.60,.12,.53,.04); hips(p,.46,.48,.54,.48);
-        legs(p,.46,.70,.46,.92,.64,.66,.48,.70);
+        arms(p,.34,.13,.45,.04,.66,.13,.55,.04); hips(p,.46,.48,.54,.48);
+        legs(p,.47,.69,.47,.90,.67,.62,.50,.57);
     }
     private void tabletop(EnumMap<LandmarkName, Landmark> p, boolean extended) {
-        at(p,LandmarkName.NOSE,.24,.43); shoulders(p,.31,.48,.36,.53); hips(p,.57,.50,.62,.55);
-        arms(p,.35,.66,.34,.84, extended?.20:.39,extended?.39:.83,.73,.82);
-        legs(p,.56,.70,.55,.87,.69,.68,extended?.88:.72,extended?.48:.86);
+        at(p,LandmarkName.NOSE,.23,.40); shoulders(p,.34,.45,.36,.48); hips(p,.58,.45,.60,.48);
+        if (extended) {
+            arms(p,.23,.41,.11,.38,.36,.62,.36,.79);
+            legs(p,.58,.62,.58,.79,.71,.41,.84,.37);
+        } else {
+            arms(p,.34,.62,.34,.79,.37,.65,.37,.82);
+            legs(p,.58,.62,.58,.79,.61,.65,.61,.82);
+        }
     }
     private void lowLunge(EnumMap<LandmarkName, Landmark> p) {
-        at(p,LandmarkName.NOSE,.48,.17); shoulders(p,.42,.28,.56,.28); arms(p,.38,.47,.32,.65,.60,.47,.66,.65);
-        hips(p,.44,.52,.55,.52); legs(p,.35,.69,.25,.90,.68,.72,.83,.88);
+        at(p,LandmarkName.NOSE,.47,.16); shoulders(p,.42,.28,.54,.28); arms(p,.35,.40,.31,.53,.61,.40,.65,.53);
+        hips(p,.45,.50,.53,.50); legs(p,.34,.64,.34,.84,.66,.68,.81,.83);
     }
     private void bridge(EnumMap<LandmarkName, Landmark> p) {
-        at(p,LandmarkName.NOSE,.18,.68); shoulders(p,.27,.70,.31,.74); arms(p,.38,.77,.49,.82,.39,.78,.50,.83);
-        hips(p,.52,.55,.57,.59); legs(p,.66,.68,.75,.84,.70,.70,.80,.84);
+        at(p,LandmarkName.NOSE,.18,.67); shoulders(p,.28,.70,.30,.73); arms(p,.40,.77,.53,.81,.42,.79,.55,.83);
+        hips(p,.53,.52,.56,.54); legs(p,.68,.62,.73,.81,.71,.64,.77,.82);
     }
     private void seatedFold(EnumMap<LandmarkName, Landmark> p) {
-        at(p,LandmarkName.NOSE,.38,.46); shoulders(p,.40,.50,.48,.54); arms(p,.56,.62,.68,.72,.57,.64,.70,.74);
-        hips(p,.48,.68,.54,.69); legs(p,.66,.74,.82,.78,.68,.78,.84,.82);
+        at(p,LandmarkName.NOSE,.37,.43); shoulders(p,.41,.50,.44,.53); arms(p,.55,.58,.66,.65,.57,.61,.69,.68);
+        hips(p,.52,.67,.55,.69); legs(p,.69,.71,.84,.73,.71,.75,.86,.77);
     }
     private void rest(EnumMap<LandmarkName, Landmark> p) {
-        at(p,LandmarkName.NOSE,.18,.68); shoulders(p,.29,.70,.35,.70); arms(p,.43,.62,.53,.57,.43,.78,.53,.83);
-        hips(p,.55,.70,.60,.70); legs(p,.70,.70,.84,.68,.72,.75,.86,.78);
+        at(p,LandmarkName.NOSE,.17,.67); shoulders(p,.28,.70,.32,.73); arms(p,.41,.63,.54,.58,.43,.80,.56,.85);
+        hips(p,.53,.70,.57,.73); legs(p,.70,.68,.84,.64,.72,.77,.86,.82);
     }
     private void shoulders(EnumMap<LandmarkName, Landmark> p,double lx,double ly,double rx,double ry){at(p,LandmarkName.LEFT_SHOULDER,lx,ly);at(p,LandmarkName.RIGHT_SHOULDER,rx,ry);}
     private void hips(EnumMap<LandmarkName, Landmark> p,double lx,double ly,double rx,double ry){at(p,LandmarkName.LEFT_HIP,lx,ly);at(p,LandmarkName.RIGHT_HIP,rx,ry);}
