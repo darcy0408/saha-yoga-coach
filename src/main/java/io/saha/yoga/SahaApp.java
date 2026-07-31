@@ -50,20 +50,28 @@ public final class SahaApp extends Application {
         stage.setScene(scene);
     }
 
+    private ScrollPane scrollable(Region content) {
+        var scroll = new ScrollPane(content);
+        scroll.setFitToWidth(true);
+        scroll.setPannable(true);
+        scroll.getStyleClass().add("page-scroll");
+        return scroll;
+    }
+
     private void showWelcome() {
         var title = new Label("Move with awareness."); title.getStyleClass().add("hero");
-        var intro = new Label("Saha guides a gentle practice using anonymous body landmarks. Camera images stay on this device and are not saved."); intro.setWrapText(true); intro.getStyleClass().add("lead");
+        var intro = new Label("Saha guides a gentle practice using anonymous body landmarks. Camera images stay on this device and are not saved."); intro.setWrapText(true); intro.setMaxWidth(1050); intro.setMinHeight(Region.USE_PREF_SIZE); intro.getStyleClass().add("lead");
         var experience = new ComboBox<String>(); experience.getItems().addAll("New to yoga", "Some experience", "Regular practice"); experience.getSelectionModel().selectFirst();
         var goal = new ComboBox<String>(); goal.getItems().addAll("Gentle movement", "Flexibility", "Balance", "Strength", "Recovery"); goal.getSelectionModel().selectFirst();
         var mobility = new TextField(); mobility.setPromptText("Optional movement limits or areas to avoid");
         var intensity = new Slider(1, 3, 1); intensity.setShowTickLabels(true); intensity.setMajorTickUnit(1); intensity.setSnapToTicks(true);
-        var consent = new CheckBox("I understand Saha is educational fitness software, not medical care.");
-        var safety = new Label("Stop immediately for pain, dizziness, numbness, weakness, or unusual discomfort. For pregnancy, recent surgery, chronic pain, or significant mobility limits, seek appropriate professional guidance."); safety.setWrapText(true); safety.getStyleClass().add("notice");
+        var consent = new CheckBox("I understand Saha is educational fitness software, not medical care."); consent.setWrapText(true); consent.setMinHeight(Region.USE_PREF_SIZE);
+        var safety = new Label("Stop immediately for pain, dizziness, numbness, weakness, or unusual discomfort. For pregnancy, recent surgery, chronic pain, or significant mobility limits, seek appropriate professional guidance."); safety.setWrapText(true); safety.setMinHeight(Region.USE_PREF_SIZE); safety.getStyleClass().add("notice");
         var start = new Button("Continue to camera setup"); start.getStyleClass().add("primary"); start.disableProperty().bind(consent.selectedProperty().not()); start.setOnAction(e -> showCalibration());
         var form = new VBox(14, field("Experience", experience), field("Focus", goal), field("Anything we should avoid?", mobility), field("Preferred intensity · gentle to active", intensity), consent, safety, start);
         form.getStyleClass().add("card"); form.setMaxWidth(700);
         var page = new VBox(24, new Label("SAHA  /  PRIVATE BY DEFAULT"), title, intro, form); page.setAlignment(Pos.CENTER_LEFT); page.setPadding(new Insets(55, 100, 55, 100)); page.getStyleClass().add("page");
-        setPage(page);
+        setPage(scrollable(page));
     }
 
     private VBox field(String name, Control control) { var label = new Label(name); label.getStyleClass().add("field-label"); control.setMaxWidth(Double.MAX_VALUE); return new VBox(6, label, control); }
