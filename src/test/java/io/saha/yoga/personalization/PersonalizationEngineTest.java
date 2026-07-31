@@ -16,5 +16,10 @@ class PersonalizationEngineTest {
         var metric = new SessionMetric("tree", Instant.now(), 5, .2, 0, false, .9, false);
         assertEquals(-20, new PersonalizationEngine().recommend(List.of(metric)).durationAdjustments().get("tree"));
     }
+    @Test void skippedPoseIsNotMisreportedAsDiscomfort() {
+        var skipped = new SessionMetric("tree", Instant.now(), 0, 0, 0, true, .9, false);
+        var result = new PersonalizationEngine().recommend(List.of(skipped, skipped));
+        assertTrue(result.explanations().stream().noneMatch(reason -> reason.contains("discomfort")));
+        assertEquals(-15, result.durationAdjustments().get("tree"));
+    }
 }
-

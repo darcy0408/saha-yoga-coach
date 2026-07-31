@@ -154,7 +154,7 @@ public final class SahaApp extends Application {
         remaining = current().durationSeconds(); updatePose();
     }
     private void saveMetric(boolean skipped) {
-        try { store.append(new SessionMetric(current().pose().id(), Instant.now(), current().durationSeconds() - remaining, skipped ? 0 : .82, 1, skipped, .91, !skipped)); } catch (IOException ignored) { }
+        try { store.append(new SessionMetric(current().pose().id(), Instant.now(), current().durationSeconds() - remaining, skipped ? 0 : .82, 1, skipped, .91, true)); } catch (IOException ignored) { }
     }
     private void finish(boolean completed) { if (clock != null) clock.stop(); showProgress(completed); }
 
@@ -179,22 +179,31 @@ public final class SahaApp extends Application {
         double scale = Math.min(w, h);
         double offsetX = (w - scale) / 2;
         double offsetY = (h - scale) / 2;
-        var links = List.of(new LandmarkName[]{LandmarkName.LEFT_SHOULDER,LandmarkName.RIGHT_SHOULDER}, new LandmarkName[]{LandmarkName.LEFT_SHOULDER,LandmarkName.LEFT_HIP}, new LandmarkName[]{LandmarkName.RIGHT_SHOULDER,LandmarkName.RIGHT_HIP}, new LandmarkName[]{LandmarkName.LEFT_HIP,LandmarkName.RIGHT_HIP}, new LandmarkName[]{LandmarkName.LEFT_HIP,LandmarkName.LEFT_KNEE}, new LandmarkName[]{LandmarkName.LEFT_KNEE,LandmarkName.LEFT_ANKLE}, new LandmarkName[]{LandmarkName.RIGHT_HIP,LandmarkName.RIGHT_KNEE}, new LandmarkName[]{LandmarkName.RIGHT_KNEE,LandmarkName.RIGHT_ANKLE}, new LandmarkName[]{LandmarkName.LEFT_SHOULDER,LandmarkName.LEFT_ELBOW}, new LandmarkName[]{LandmarkName.LEFT_ELBOW,LandmarkName.LEFT_WRIST}, new LandmarkName[]{LandmarkName.RIGHT_SHOULDER,LandmarkName.RIGHT_ELBOW}, new LandmarkName[]{LandmarkName.RIGHT_ELBOW,LandmarkName.RIGHT_WRIST});
-        for (var link : links) { var a=frame.landmarks().get(link[0]); var b=frame.landmarks().get(link[1]); var line=new Line(offsetX+a.x()*scale,offsetY+a.y()*scale,offsetX+b.x()*scale,offsetY+b.y()*scale); line.setStroke(Color.web("#8dd7c6")); line.setStrokeWidth(5); bodyView.getChildren().add(line); }
-        frame.landmarks().values().forEach(p -> { var circle=new Circle(offsetX+p.x()*scale,offsetY+p.y()*scale,6,Color.web("#f4c77a")); bodyView.getChildren().add(circle); });
+        var links = List.of(new LandmarkName[]{LandmarkName.LEFT_SHOULDER,LandmarkName.RIGHT_SHOULDER}, new LandmarkName[]{LandmarkName.LEFT_SHOULDER,LandmarkName.LEFT_HIP}, new LandmarkName[]{LandmarkName.RIGHT_SHOULDER,LandmarkName.RIGHT_HIP}, new LandmarkName[]{LandmarkName.LEFT_HIP,LandmarkName.RIGHT_HIP}, new LandmarkName[]{LandmarkName.LEFT_HIP,LandmarkName.LEFT_KNEE}, new LandmarkName[]{LandmarkName.LEFT_KNEE,LandmarkName.LEFT_ANKLE}, new LandmarkName[]{LandmarkName.LEFT_ANKLE,LandmarkName.LEFT_TOE}, new LandmarkName[]{LandmarkName.RIGHT_HIP,LandmarkName.RIGHT_KNEE}, new LandmarkName[]{LandmarkName.RIGHT_KNEE,LandmarkName.RIGHT_ANKLE}, new LandmarkName[]{LandmarkName.RIGHT_ANKLE,LandmarkName.RIGHT_TOE}, new LandmarkName[]{LandmarkName.LEFT_SHOULDER,LandmarkName.LEFT_ELBOW}, new LandmarkName[]{LandmarkName.LEFT_ELBOW,LandmarkName.LEFT_WRIST}, new LandmarkName[]{LandmarkName.RIGHT_SHOULDER,LandmarkName.RIGHT_ELBOW}, new LandmarkName[]{LandmarkName.RIGHT_ELBOW,LandmarkName.RIGHT_WRIST});
+        for (var link : links) { var a=frame.landmarks().get(link[0]); var b=frame.landmarks().get(link[1]); if (a == null || b == null) continue; var line=new Line(offsetX+a.x()*scale,offsetY+a.y()*scale,offsetX+b.x()*scale,offsetY+b.y()*scale); line.setStroke(Color.web("#8dd7c6")); line.setStrokeWidth(5); bodyView.getChildren().add(line); }
+        frame.landmarks().entrySet().stream().filter(entry -> entry.getKey() != LandmarkName.NOSE).map(Map.Entry::getValue)
+                .forEach(p -> { var circle=new Circle(offsetX+p.x()*scale,offsetY+p.y()*scale,6,Color.web("#f4c77a")); bodyView.getChildren().add(circle); });
         var nose = frame.landmarks().get(LandmarkName.NOSE);
         var leftShoulder = frame.landmarks().get(LandmarkName.LEFT_SHOULDER);
         var rightShoulder = frame.landmarks().get(LandmarkName.RIGHT_SHOULDER);
         double headRadius = Math.max(20, scale*.052);
         double headCenterX = offsetX + nose.x()*scale;
-        double headCenterY = offsetY + nose.y()*scale + headRadius*.30;
+        double headCenterY = offsetY + nose.y()*scale;
         var head = new Circle(headCenterX, headCenterY, headRadius, Color.TRANSPARENT);
         head.setStroke(Color.web("#8dd7c6")); head.setStrokeWidth(5);
-        var neck = new Line(headCenterX, headCenterY + headRadius,
-                offsetX+((leftShoulder.x()+rightShoulder.x())/2)*scale,
-                offsetY+((leftShoulder.y()+rightShoulder.y())/2)*scale);
+        double shoulderX = offsetX+((leftShoulder.x()+rightShoulder.x())/2)*scale;
+        double shoulderY = offsetY+((leftShoulder.y()+rightShoulder.y())/2)*scale;
+        double dx = shoulderX-headCenterX, dy = shoulderY-headCenterY, distance = Math.max(1, Math.hypot(dx,dy));
+        var neck = new Line(headCenterX+(dx/distance)*headRadius, headCenterY+(dy/distance)*headRadius, shoulderX, shoulderY);
         neck.setStroke(Color.web("#8dd7c6")); neck.setStrokeWidth(5);
         bodyView.getChildren().addAll(neck, head);
+        double eyeY = headCenterY-headRadius*.18;
+        var leftEye = new Circle(headCenterX-headRadius*.32, eyeY, 2.4, Color.web("#f4c77a"));
+        var rightEye = new Circle(headCenterX+headRadius*.32, eyeY, 2.4, Color.web("#f4c77a"));
+        var noseMark = new Circle(headCenterX, headCenterY+headRadius*.05, 2.2, Color.web("#f4c77a"));
+        var mouth = new Line(headCenterX-headRadius*.24, headCenterY+headRadius*.34, headCenterX+headRadius*.24, headCenterY+headRadius*.34);
+        mouth.setStroke(Color.web("#f4c77a")); mouth.setStrokeWidth(2);
+        bodyView.getChildren().addAll(leftEye, rightEye, noseMark, mouth);
         var label = new Text(18, 28, landmarks.description()); label.setFill(Color.web("#b7c8c5")); bodyView.getChildren().add(label);
     }
 

@@ -11,7 +11,7 @@ public final class PersonalizationEngine {
         var grouped = history.stream().collect(Collectors.groupingBy(SessionMetric::poseId));
         grouped.forEach((pose, metrics) -> {
             var recent = metrics.stream().sorted(Comparator.comparing(SessionMetric::completedAt).reversed()).limit(3).toList();
-            if (recent.stream().anyMatch(m -> !m.comfortable())) {
+            if (recent.stream().anyMatch(m -> !m.comfortable() && !m.skipped())) {
                 adjustments.put(pose, -20);
                 reasons.add("Reduced " + readable(pose) + " because discomfort was reported.");
             } else if (recent.size() >= 2 && recent.stream().filter(SessionMetric::skipped).count() >= 2) {
@@ -23,11 +23,10 @@ public final class PersonalizationEngine {
             }
         });
         if (reasons.isEmpty()) reasons.add("Kept a gentle baseline while Saha learns from completed sessions.");
-        return new Recommendation(adjustments, reasons);
+        return new Recommendation(adjustments, reasons.stream().limit(3).toList());
     }
     private String readable(String id) { return id.replace('_', ' '); }
     public record Recommendation(Map<String, Integer> durationAdjustments, List<String> explanations) {
         public Recommendation { durationAdjustments = Map.copyOf(durationAdjustments); explanations = List.copyOf(explanations); }
     }
 }
-
