@@ -10,21 +10,30 @@ public final class DemoLandmarkSource implements LandmarkSource {
     private String poseId = "mountain";
     private EnumMap<LandmarkName, Landmark> displayed;
     private EnumMap<LandmarkName, Landmark> transitionFrom;
+    private EnumMap<LandmarkName, Landmark> transitionWaypoint;
     private EnumMap<LandmarkName, Landmark> target;
     private long transitionStarted;
     private FaceDirection facing = FaceDirection.FRONT;
     @Override public void selectPose(String poseId) {
+        String previousPose = this.poseId;
         transitionFrom = displayed == null ? build(this.poseId) : new EnumMap<>(displayed);
         this.poseId = poseId;
         facing = facingFor(poseId);
         target = build(poseId);
+        transitionWaypoint = crossesFloorBoundary(previousPose,poseId) ? forwardFold() : null;
         transitionStarted = System.nanoTime();
     }
     @Override public LandmarkFrame nextFrame() {
         if (target == null) target = build(poseId);
-        double progress = Math.min(1, (System.nanoTime()-transitionStarted)/3_000_000_000.0);
-        double eased = progress*progress*(3-2*progress);
-        displayed = interpolate(transitionFrom == null ? target : transitionFrom, target, eased);
+        double progress = Math.min(1, (System.nanoTime()-transitionStarted)/5_000_000_000.0);
+        if (transitionWaypoint == null) {
+            double eased=progress*progress*(3-2*progress);
+            displayed=interpolate(transitionFrom==null?target:transitionFrom,target,eased);
+        } else if (progress<.5) {
+            double part=progress*2; displayed=interpolate(transitionFrom,transitionWaypoint,part*part*(3-2*part));
+        } else {
+            double part=(progress-.5)*2; displayed=interpolate(transitionWaypoint,target,part*part*(3-2*part));
+        }
         constrain(displayed, facing);
         frame++;
         return new LandmarkFrame(Instant.now(), displayed);
@@ -54,16 +63,30 @@ public final class DemoLandmarkSource implements LandmarkSource {
         to.forEach((name,end) -> { var start=from.getOrDefault(name,end); result.put(name,new Landmark(start.x()+(end.x()-start.x())*amount,start.y()+(end.y()-start.y())*amount,confidence())); });
         return result;
     }
-    @Override public boolean isTransitioning() { return target != null && (System.nanoTime()-transitionStarted) < 3_000_000_000L; }
+    @Override public boolean isTransitioning() { return target != null && (System.nanoTime()-transitionStarted) < 5_000_000_000L; }
     @Override public FaceDirection faceDirection() { return facing; }
     LandmarkFrame targetFrame() { return new LandmarkFrame(Instant.now(), target == null ? build(poseId) : target); }
     private FaceDirection facingFor(String id) { return switch(id) {
-        case "warrior_two", "triangle", "cat_cow", "bird_dog", "chair" -> FaceDirection.LEFT;
+        case "warrior_two" -> FaceDirection.LEFT;
+        case "cat_cow", "bird_dog" -> FaceDirection.DOWN;
+        case "triangle" -> FaceDirection.UP;
+        case "chair" -> FaceDirection.RIGHT;
         case "seated_fold" -> FaceDirection.RIGHT;
         case "bridge", "rest" -> FaceDirection.UP;
         case "low_lunge" -> FaceDirection.LEFT;
         default -> FaceDirection.FRONT;
     }; }
+    @Override public String transitionGuidance() { return transitionWaypoint == null
+            ? "Move slowly while keeping each joint comfortable."
+            : "Soften your knees, fold forward, place your hands down, then move one knee at a time."; }
+    private boolean crossesFloorBoundary(String from,String to) { return isFloor(from)!=isFloor(to); }
+    private boolean isFloor(String id) { return switch(id){case "cat_cow","bird_dog","bridge","seated_fold","rest"->true;default->false;}; }
+    private EnumMap<LandmarkName, Landmark> forwardFold() {
+        var p=new EnumMap<LandmarkName,Landmark>(LandmarkName.class); standing(p);
+        at(p,LandmarkName.NOSE,.48,.57); shoulders(p,.47,.51,.53,.52); hips(p,.46,.46,.54,.47);
+        arms(p,.44,.64,.43,.77,.56,.65,.57,.78); at(p,LandmarkName.LEFT_HAND,.43,.85);at(p,LandmarkName.RIGHT_HAND,.57,.85);
+        legs(p,.45,.67,.44,.87,.55,.68,.56,.87);toes(p,.44,.94,.56,.94);constrain(p,FaceDirection.DOWN);return p;
+    }
 
     private void constrain(EnumMap<LandmarkName, Landmark> p, FaceDirection view) {
         var raw = new EnumMap<>(p);
@@ -94,7 +117,7 @@ public final class DemoLandmarkSource implements LandmarkSource {
     private double confidence(){return frame%300>=290?.55:.94;}
     private void standing(EnumMap<LandmarkName, Landmark> p) {
         at(p, LandmarkName.NOSE,.50,.10); shoulders(p,.42,.21,.58,.21); arms(p,.40,.40,.39,.58,.60,.40,.61,.58);
-        hips(p,.46,.48,.54,.48); legs(p,.46,.70,.45,.88,.54,.70,.55,.88); toes(p,.39,.89,.61,.89);
+        hips(p,.46,.48,.54,.48); legs(p,.46,.70,.45,.88,.54,.70,.55,.88); toes(p,.45,.96,.55,.96);
     }
     private void chair(EnumMap<LandmarkName, Landmark> p) {
         at(p,LandmarkName.NOSE,.38,.16); shoulders(p,.40,.29,.43,.30); arms(p,.31,.15,.33,.02,.34,.15,.36,.02);
@@ -106,11 +129,11 @@ public final class DemoLandmarkSource implements LandmarkSource {
     }
     private void warriorTwo(EnumMap<LandmarkName, Landmark> p) {
         arms(p,.29,.21,.16,.21,.71,.21,.84,.21); hips(p,.46,.48,.54,.48);
-        legs(p,.34,.64,.34,.85,.67,.66,.80,.85); toes(p,.25,.85,.88,.85);
+        legs(p,.34,.64,.34,.85,.67,.66,.80,.85); toes(p,.25,.85,.80,.77);
     }
     private void triangle(EnumMap<LandmarkName, Landmark> p) {
         at(p,LandmarkName.NOSE,.29,.24); shoulders(p,.32,.35,.39,.31);
-        arms(p,.30,.49,.29,.63,.45,.20,.50,.08); hips(p,.45,.53,.53,.53);
+        arms(p,.34,.49,.34,.63,.45,.20,.50,.08); hips(p,.45,.53,.53,.53);
         legs(p,.34,.69,.22,.86,.65,.69,.78,.86); toes(p,.14,.86,.86,.86);
     }
     private void tree(EnumMap<LandmarkName, Landmark> p) {
@@ -121,10 +144,12 @@ public final class DemoLandmarkSource implements LandmarkSource {
         at(p,LandmarkName.NOSE,.23,.40); shoulders(p,.34,.45,.36,.48); hips(p,.58,.45,.60,.48);
         if (extended) {
             arms(p,.23,.41,.11,.38,.36,.62,.36,.79);
+            at(p,LandmarkName.LEFT_HAND,.05,.36); at(p,LandmarkName.RIGHT_HAND,.30,.79);
             legs(p,.58,.62,.58,.79,.71,.41,.84,.37);
             toes(p,.64,.79,.91,.35);
         } else {
             arms(p,.34,.62,.34,.79,.37,.65,.37,.82);
+            at(p,LandmarkName.LEFT_HAND,.28,.79); at(p,LandmarkName.RIGHT_HAND,.31,.82);
             legs(p,.58,.62,.58,.79,.61,.65,.61,.82);
             toes(p,.65,.80,.68,.82);
         }

@@ -15,6 +15,7 @@ import javafx.scene.control.*;
 import javafx.scene.layout.*;
 import javafx.scene.paint.Color;
 import javafx.scene.shape.Circle;
+import javafx.scene.shape.Ellipse;
 import javafx.scene.shape.Line;
 import javafx.scene.text.Text;
 import javafx.stage.Stage;
@@ -128,7 +129,7 @@ public final class SahaApp extends Application {
         var frame = landmarks.nextFrame(); drawFrame(frame);
         if (landmarks.isTransitioning()) {
             statusLabel.setText("Status: Moving into " + current().pose().displayName());
-            suggestionLabel.setText("Primary suggestion: Move slowly and use support if you need it.");
+            suggestionLabel.setText("Transition: " + landmarks.transitionGuidance());
             optionalLabel.setText("The hold begins when the transition finishes.");
             confidenceLabel.setText("Analysis: Paused during transition");
             timerLabel.setText(format(remaining) + " · transition");
@@ -200,12 +201,15 @@ public final class SahaApp extends Application {
         double headRadius = Math.max(20, scale*.052);
         double headCenterX = offsetX + nose.x()*scale;
         double headCenterY = offsetY + nose.y()*scale;
-        var head = new Circle(headCenterX, headCenterY, headRadius, Color.TRANSPARENT);
+        double headRadiusX=headRadius*.84, headRadiusY=headRadius*1.08;
+        var head = new Ellipse(headCenterX, headCenterY, headRadiusX, headRadiusY);
+        head.setFill(Color.TRANSPARENT);
         head.setStroke(Color.web("#8dd7c6")); head.setStrokeWidth(5);
         double shoulderX = offsetX+((leftShoulder.x()+rightShoulder.x())/2)*scale;
         double shoulderY = offsetY+((leftShoulder.y()+rightShoulder.y())/2)*scale;
-        double dx = shoulderX-headCenterX, dy = shoulderY-headCenterY, distance = Math.max(1, Math.hypot(dx,dy));
-        var neck = new Line(headCenterX+(dx/distance)*headRadius, headCenterY+(dy/distance)*headRadius, shoulderX, shoulderY);
+        double dx=shoulderX-headCenterX,dy=shoulderY-headCenterY;
+        double boundaryScale=1/Math.sqrt((dx*dx)/(headRadiusX*headRadiusX)+(dy*dy)/(headRadiusY*headRadiusY));
+        var neck = new Line(headCenterX+dx*boundaryScale,headCenterY+dy*boundaryScale,shoulderX,shoulderY);
         neck.setStroke(Color.web("#8dd7c6")); neck.setStrokeWidth(5);
         bodyView.getChildren().addAll(neck, head);
         drawFace(headCenterX, headCenterY, headRadius, landmarks.faceDirection());

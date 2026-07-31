@@ -35,7 +35,25 @@ class DemoLandmarkSourceTest {
             assertLength(shoulderCenter,hipCenter,.24,pose.id()+" torso");
             assertHand(p.get(LandmarkName.LEFT_WRIST), p.get(LandmarkName.LEFT_HAND), pose.id()+" left hand");
             assertHand(p.get(LandmarkName.RIGHT_WRIST), p.get(LandmarkName.RIGHT_HAND), pose.id()+" right hand");
+            assertLength(p.get(LandmarkName.LEFT_ANKLE),p.get(LandmarkName.LEFT_TOE),.08,pose.id()+" left foot");
+            assertLength(p.get(LandmarkName.RIGHT_ANKLE),p.get(LandmarkName.RIGHT_TOE),.08,pose.id()+" right foot");
         }
+    }
+
+    @Test void referenceAlignmentRelationshipsArePreserved() {
+        var source=new DemoLandmarkSource();
+        source.selectPose("warrior_two"); var warrior=source.targetFrame().landmarks();
+        assertEquals(warrior.get(LandmarkName.LEFT_KNEE).x(),warrior.get(LandmarkName.LEFT_ANKLE).x(),.03,"front knee over ankle");
+        assertTrue(warrior.get(LandmarkName.LEFT_TOE).x()<warrior.get(LandmarkName.LEFT_ANKLE).x(),"front foot points toward gaze");
+        assertTrue(warrior.get(LandmarkName.RIGHT_TOE).y()<warrior.get(LandmarkName.RIGHT_ANKLE).y(),"back foot turns inward");
+        source.selectPose("chair"); var chair=source.targetFrame().landmarks();
+        assertTrue(chair.get(LandmarkName.LEFT_KNEE).x()>chair.get(LandmarkName.LEFT_HIP).x(),"chair hips sit back from knees");
+        assertEquals(chair.get(LandmarkName.LEFT_KNEE).x(),chair.get(LandmarkName.LEFT_ANKLE).x(),.08,"chair knee stays near ankle");
+        source.selectPose("cat_cow"); var table=source.targetFrame().landmarks();
+        assertEquals(table.get(LandmarkName.LEFT_SHOULDER).x(),table.get(LandmarkName.LEFT_WRIST).x(),.08,"wrist beneath shoulder");
+        assertEquals(table.get(LandmarkName.LEFT_HIP).x(),table.get(LandmarkName.LEFT_KNEE).x(),.08,"knee beneath hip");
+        source.selectPose("triangle"); var triangle=source.targetFrame().landmarks();
+        assertEquals(triangle.get(LandmarkName.LEFT_HAND).x(),triangle.get(LandmarkName.LEFT_KNEE).x(),.10,"lower hand reaches toward shin");
     }
 
     private void assertLength(Landmark a, Landmark b, double expected, String message) {
