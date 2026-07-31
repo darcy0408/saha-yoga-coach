@@ -83,7 +83,16 @@ public final class DemoLandmarkSource implements LandmarkSource {
     }
     private void shoulders(EnumMap<LandmarkName, Landmark> p,double lx,double ly,double rx,double ry){at(p,LandmarkName.LEFT_SHOULDER,lx,ly);at(p,LandmarkName.RIGHT_SHOULDER,rx,ry);}
     private void hips(EnumMap<LandmarkName, Landmark> p,double lx,double ly,double rx,double ry){at(p,LandmarkName.LEFT_HIP,lx,ly);at(p,LandmarkName.RIGHT_HIP,rx,ry);}
-    private void arms(EnumMap<LandmarkName, Landmark> p,double lex,double ley,double lwx,double lwy,double rex,double rey,double rwx,double rwy){at(p,LandmarkName.LEFT_ELBOW,lex,ley);at(p,LandmarkName.LEFT_WRIST,lwx,lwy);at(p,LandmarkName.RIGHT_ELBOW,rex,rey);at(p,LandmarkName.RIGHT_WRIST,rwx,rwy);}
+    private void arms(EnumMap<LandmarkName, Landmark> p,double lex,double ley,double lwx,double lwy,double rex,double rey,double rwx,double rwy){
+        at(p,LandmarkName.LEFT_ELBOW,lex,ley); at(p,LandmarkName.LEFT_WRIST,lwx,lwy);
+        at(p,LandmarkName.RIGHT_ELBOW,rex,rey); at(p,LandmarkName.RIGHT_WRIST,rwx,rwy);
+        handBeyond(p, LandmarkName.LEFT_HAND, lex, ley, lwx, lwy);
+        handBeyond(p, LandmarkName.RIGHT_HAND, rex, rey, rwx, rwy);
+    }
+    private void handBeyond(EnumMap<LandmarkName, Landmark> p, LandmarkName hand, double elbowX, double elbowY, double wristX, double wristY) {
+        double dx=wristX-elbowX, dy=wristY-elbowY, length=Math.max(.001,Math.hypot(dx,dy));
+        at(p,hand,wristX+(dx/length)*.055,wristY+(dy/length)*.055);
+    }
     private void legs(EnumMap<LandmarkName, Landmark> p,double lkx,double lky,double lax,double lay,double rkx,double rky,double rax,double ray){at(p,LandmarkName.LEFT_KNEE,lkx,lky);at(p,LandmarkName.LEFT_ANKLE,lax,lay);at(p,LandmarkName.RIGHT_KNEE,rkx,rky);at(p,LandmarkName.RIGHT_ANKLE,rax,ray);}
     private void toes(EnumMap<LandmarkName, Landmark> p,double lx,double ly,double rx,double ry){at(p,LandmarkName.LEFT_TOE,lx,ly);at(p,LandmarkName.RIGHT_TOE,rx,ry);}
     private void at(EnumMap<LandmarkName, Landmark> p, LandmarkName name,double x,double y){ put(p,name,x,y); }

@@ -29,11 +29,17 @@ class DemoLandmarkSourceTest {
             assertSegment(p.get(LandmarkName.LEFT_KNEE), p.get(LandmarkName.LEFT_ANKLE), pose.id()+" left shin");
             assertSegment(p.get(LandmarkName.RIGHT_HIP), p.get(LandmarkName.RIGHT_KNEE), pose.id()+" right thigh");
             assertSegment(p.get(LandmarkName.RIGHT_KNEE), p.get(LandmarkName.RIGHT_ANKLE), pose.id()+" right shin");
+            assertHand(p.get(LandmarkName.LEFT_WRIST), p.get(LandmarkName.LEFT_HAND), pose.id()+" left hand");
+            assertHand(p.get(LandmarkName.RIGHT_WRIST), p.get(LandmarkName.RIGHT_HAND), pose.id()+" right hand");
         }
     }
 
     private void assertSegment(Landmark a, Landmark b, String message) {
         double length = Math.hypot(a.x()-b.x(), a.y()-b.y());
         assertTrue(length >= .10 && length <= .25, message+" length was "+length);
+    }
+    private void assertHand(Landmark wrist, Landmark hand, String message) {
+        double length = Math.hypot(wrist.x()-hand.x(), wrist.y()-hand.y());
+        assertEquals(.055, length, .001, message);
     }
 }
