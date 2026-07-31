@@ -1,7 +1,7 @@
 # Implementation report
 
 ```text
-Build status: PASS on JDK 21 compatibility verification; Java 26 acceptance build BLOCKED because JDK 26 is not installed on the authoring host.
+Build status: PASS on Temurin JDK 26.0.1; Gradle configuration cache is disabled because the OpenJFX run task is incompatible with it.
 Test status: PASS — 10 tests covering geometry, reliability, cue limit, routine length/adjustments, personalization, and persistence.
 Implemented features: JavaFX onboarding, calibration, synthetic-landmark coaching demo, 19:10 beginner routine, 12 poses/modifications, confidence-aware angle feedback, pause/repeat/skip/easier/stop, derived local history, explainable personalization, progress, deletion, documentation.
 Java 26 features used: Java 26 Gradle toolchain target; records; sealed results and exhaustive pattern matching; modern collection APIs. JavaFX 26 is the default UI runtime.

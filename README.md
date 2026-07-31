@@ -46,7 +46,7 @@ See [architecture](docs/architecture.md) and the [development plan](docs/develop
 2. On Windows, run `gradlew.bat test`; on macOS/Linux, run `./gradlew test`.
 3. No camera, account, credential, or model is required for demo mode.
 
-The initial development machine had JDK 21 only, so Java 26 compilation must be repeated on the submission machine or CI. Dependencies are downloaded from Maven Central on first build.
+The project has been verified with Temurin JDK 26.0.1. Dependencies are downloaded from Maven Central on first build. Gradle's build cache is enabled; its configuration cache is disabled because the OpenJFX `run` task is not compatible with it.
 
 For a provisional check on that host only, use `gradlew.bat test -PjavaVersion=21`. This does not constitute the required Java 26 acceptance test; Java 26 remains the default.
 
