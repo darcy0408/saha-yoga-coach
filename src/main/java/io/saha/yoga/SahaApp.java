@@ -9,6 +9,7 @@ import io.saha.yoga.vision.*;
 import javafx.animation.KeyFrame;
 import javafx.animation.Timeline;
 import javafx.application.Application;
+import javafx.application.Platform;
 import javafx.geometry.*;
 import javafx.scene.Scene;
 import javafx.scene.control.*;
@@ -17,6 +18,7 @@ import javafx.scene.paint.Color;
 import javafx.scene.shape.Circle;
 import javafx.scene.shape.Ellipse;
 import javafx.scene.shape.Line;
+import javafx.scene.shape.QuadCurve;
 import javafx.scene.text.Text;
 import javafx.stage.Stage;
 import javafx.util.Duration;
@@ -39,6 +41,8 @@ public final class SahaApp extends Application {
     private Timeline clock;
     private Label poseLabel, phaseLabel, statusLabel, suggestionLabel, optionalLabel, confidenceLabel, timerLabel;
     private Pane bodyView;
+    private HBox practicePath;
+    private ScrollPane practicePathScroll;
 
     @Override public void start(Stage primaryStage) {
         stage = primaryStage; stage.setTitle("Saha · personal yoga coach");
@@ -116,7 +120,12 @@ public final class SahaApp extends Application {
         controls.add(stop, 0, 2, 2, 1);
         var reasonText = wrapLabel(); reasonText.setMinHeight(Region.USE_PREF_SIZE); reasonText.setText(String.join(" ", routine.explanations()));
         var feedback = new VBox(10, phaseLabel, poseLabel, timerLabel, statusLabel, suggestionLabel, optionalLabel, confidenceLabel, new Separator(), new Label("Why this routine changed"), reasonText, controls); feedback.getStyleClass().add("card"); feedback.setMaxWidth(440);
-        var page = new BorderPane(bodyView, null, feedback, null, null); page.setPadding(new Insets(35)); BorderPane.setMargin(feedback, new Insets(0, 0, 0, 25)); page.getStyleClass().add("page");
+        var coach = new BorderPane(bodyView, null, feedback, null, null); BorderPane.setMargin(feedback, new Insets(0, 0, 0, 25));
+        practicePath = new HBox(8); practicePath.setAlignment(Pos.CENTER_LEFT);
+        practicePathScroll = new ScrollPane(practicePath); practicePathScroll.setFitToHeight(true); practicePathScroll.setPannable(true); practicePathScroll.setHbarPolicy(ScrollPane.ScrollBarPolicy.AS_NEEDED); practicePathScroll.setVbarPolicy(ScrollPane.ScrollBarPolicy.NEVER); practicePathScroll.getStyleClass().add("practice-path-scroll");
+        var pathTitle = new Label("TODAY'S PRACTICE PATH"); pathTitle.getStyleClass().add("badge");
+        var pathArea = new VBox(7, pathTitle, practicePathScroll); pathArea.getStyleClass().add("practice-path-area");
+        var page = new VBox(18, pathArea, coach); VBox.setVgrow(coach, Priority.ALWAYS); page.setPadding(new Insets(24, 35, 35, 35)); page.getStyleClass().add("page");
         setPage(page); updatePose();
         clockTicks = 0;
         clock = new Timeline(new KeyFrame(Duration.millis(100), e -> tick())); clock.setCycleCount(Timeline.INDEFINITE); clock.play();
@@ -159,7 +168,28 @@ public final class SahaApp extends Application {
         landmarks.selectPose(item.pose().id());
         poseLabel.setText("Current pose: " + item.pose().displayName());
         phaseLabel.setText(item.phase().toUpperCase()); timerLabel.setText(format(remaining));
+        updatePracticePath();
         drawFrame(landmarks.nextFrame());
+    }
+    private void updatePracticePath() {
+        if (practicePath == null) return;
+        practicePath.getChildren().clear();
+        for (int i = 0; i < routine.items().size(); i++) {
+            var item = routine.items().get(i);
+            if (i > 0) {
+                var arrow = new Label("→"); arrow.getStyleClass().add("path-arrow");
+                practicePath.getChildren().add(arrow);
+            }
+            var marker = new Label(i == itemIndex ? "YOU ARE HERE" : item.phase().toUpperCase()); marker.getStyleClass().add("path-marker");
+            var name = new Label(item.pose().displayName()); name.setWrapText(true); name.getStyleClass().add("path-name");
+            var duration = new Label(format(item.durationSeconds())); duration.getStyleClass().add("path-duration");
+            var card = new VBox(2, marker, name, duration); card.getStyleClass().add("path-pose");
+            if (i < itemIndex) card.getStyleClass().add("complete");
+            if (i == itemIndex) card.getStyleClass().add("current");
+            practicePath.getChildren().add(card);
+        }
+        double location = routine.items().size() <= 1 ? 0 : (double) itemIndex / (routine.items().size() - 1);
+        Platform.runLater(() -> practicePathScroll.setHvalue(location));
     }
     private void advance(boolean skipped) {
         saveMetric(skipped); if (++itemIndex >= routine.items().size()) { finish(true); return; }
@@ -191,10 +221,19 @@ public final class SahaApp extends Application {
         double scale = Math.min(w, h);
         double offsetX = (w - scale) / 2;
         double offsetY = (h - scale) / 2;
-        var links = List.of(new LandmarkName[]{LandmarkName.LEFT_SHOULDER,LandmarkName.RIGHT_SHOULDER}, new LandmarkName[]{LandmarkName.LEFT_SHOULDER,LandmarkName.LEFT_HIP}, new LandmarkName[]{LandmarkName.RIGHT_SHOULDER,LandmarkName.RIGHT_HIP}, new LandmarkName[]{LandmarkName.LEFT_HIP,LandmarkName.RIGHT_HIP}, new LandmarkName[]{LandmarkName.LEFT_HIP,LandmarkName.LEFT_KNEE}, new LandmarkName[]{LandmarkName.LEFT_KNEE,LandmarkName.LEFT_ANKLE}, new LandmarkName[]{LandmarkName.LEFT_ANKLE,LandmarkName.LEFT_TOE}, new LandmarkName[]{LandmarkName.RIGHT_HIP,LandmarkName.RIGHT_KNEE}, new LandmarkName[]{LandmarkName.RIGHT_KNEE,LandmarkName.RIGHT_ANKLE}, new LandmarkName[]{LandmarkName.RIGHT_ANKLE,LandmarkName.RIGHT_TOE}, new LandmarkName[]{LandmarkName.LEFT_SHOULDER,LandmarkName.LEFT_ELBOW}, new LandmarkName[]{LandmarkName.LEFT_ELBOW,LandmarkName.LEFT_WRIST}, new LandmarkName[]{LandmarkName.LEFT_WRIST,LandmarkName.LEFT_HAND}, new LandmarkName[]{LandmarkName.RIGHT_SHOULDER,LandmarkName.RIGHT_ELBOW}, new LandmarkName[]{LandmarkName.RIGHT_ELBOW,LandmarkName.RIGHT_WRIST}, new LandmarkName[]{LandmarkName.RIGHT_WRIST,LandmarkName.RIGHT_HAND});
+        var links = List.of(new LandmarkName[]{LandmarkName.LEFT_SHOULDER,LandmarkName.RIGHT_SHOULDER}, new LandmarkName[]{LandmarkName.LEFT_HIP,LandmarkName.RIGHT_HIP}, new LandmarkName[]{LandmarkName.LEFT_HIP,LandmarkName.LEFT_KNEE}, new LandmarkName[]{LandmarkName.LEFT_KNEE,LandmarkName.LEFT_ANKLE}, new LandmarkName[]{LandmarkName.LEFT_ANKLE,LandmarkName.LEFT_TOE}, new LandmarkName[]{LandmarkName.RIGHT_HIP,LandmarkName.RIGHT_KNEE}, new LandmarkName[]{LandmarkName.RIGHT_KNEE,LandmarkName.RIGHT_ANKLE}, new LandmarkName[]{LandmarkName.RIGHT_ANKLE,LandmarkName.RIGHT_TOE}, new LandmarkName[]{LandmarkName.LEFT_SHOULDER,LandmarkName.LEFT_ELBOW}, new LandmarkName[]{LandmarkName.LEFT_ELBOW,LandmarkName.LEFT_WRIST}, new LandmarkName[]{LandmarkName.LEFT_WRIST,LandmarkName.LEFT_HAND}, new LandmarkName[]{LandmarkName.RIGHT_SHOULDER,LandmarkName.RIGHT_ELBOW}, new LandmarkName[]{LandmarkName.RIGHT_ELBOW,LandmarkName.RIGHT_WRIST}, new LandmarkName[]{LandmarkName.RIGHT_WRIST,LandmarkName.RIGHT_HAND});
         for (var link : links) { var a=frame.landmarks().get(link[0]); var b=frame.landmarks().get(link[1]); if (a == null || b == null) continue; var line=new Line(offsetX+a.x()*scale,offsetY+a.y()*scale,offsetX+b.x()*scale,offsetY+b.y()*scale); line.setStroke(Color.web("#8dd7c6")); line.setStrokeWidth(5); bodyView.getChildren().add(line); }
-        frame.landmarks().entrySet().stream().filter(entry -> entry.getKey() != LandmarkName.NOSE).map(Map.Entry::getValue)
-                .forEach(p -> { var circle=new Circle(offsetX+p.x()*scale,offsetY+p.y()*scale,6,Color.web("#f4c77a")); bodyView.getChildren().add(circle); });
+        var leftHip=frame.landmarks().get(LandmarkName.LEFT_HIP);var rightHip=frame.landmarks().get(LandmarkName.RIGHT_HIP);
+        var leftShoulderPoint=frame.landmarks().get(LandmarkName.LEFT_SHOULDER);var rightShoulderPoint=frame.landmarks().get(LandmarkName.RIGHT_SHOULDER);
+        double spineStartX=offsetX+(leftShoulderPoint.x()+rightShoulderPoint.x())*.5*scale,spineStartY=offsetY+(leftShoulderPoint.y()+rightShoulderPoint.y())*.5*scale;
+        double spineEndX=offsetX+(leftHip.x()+rightHip.x())*.5*scale,spineEndY=offsetY+(leftHip.y()+rightHip.y())*.5*scale;
+        double sx=spineEndX-spineStartX,sy=spineEndY-spineStartY,length=Math.max(1,Math.hypot(sx,sy));
+        var spine=new QuadCurve(spineStartX,spineStartY,(spineStartX+spineEndX)/2-(sy/length)*landmarks.spineBend()*scale,(spineStartY+spineEndY)/2+(sx/length)*landmarks.spineBend()*scale,spineEndX,spineEndY);
+        spine.setFill(Color.TRANSPARENT);spine.setStroke(Color.web("#8dd7c6"));spine.setStrokeWidth(6);bodyView.getChildren().add(spine);
+        frame.landmarks().entrySet().stream().filter(entry -> entry.getKey() != LandmarkName.NOSE).forEach(entry -> {
+            double radius=switch(entry.getKey()){case LEFT_HAND,RIGHT_HAND,LEFT_TOE,RIGHT_TOE->3.5;default->5.5;};var p=entry.getValue();
+            bodyView.getChildren().add(new Circle(offsetX+p.x()*scale,offsetY+p.y()*scale,radius,Color.web("#f4c77a")));
+        });
         var nose = frame.landmarks().get(LandmarkName.NOSE);
         var leftShoulder = frame.landmarks().get(LandmarkName.LEFT_SHOULDER);
         var rightShoulder = frame.landmarks().get(LandmarkName.RIGHT_SHOULDER);

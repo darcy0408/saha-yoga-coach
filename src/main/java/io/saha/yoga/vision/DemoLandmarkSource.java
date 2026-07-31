@@ -79,6 +79,7 @@ public final class DemoLandmarkSource implements LandmarkSource {
     @Override public String transitionGuidance() { return transitionWaypoint == null
             ? "Move slowly while keeping each joint comfortable."
             : "Soften your knees, fold forward, place your hands down, then move one knee at a time."; }
+    @Override public double spineBend() { return poseId.equals("cat_cow") ? Math.sin(System.nanoTime()/1_200_000_000.0)*.075 : 0; }
     private boolean crossesFloorBoundary(String from,String to) { return isFloor(from)!=isFloor(to); }
     private boolean isFloor(String id) { return switch(id){case "cat_cow","bird_dog","bridge","seated_fold","rest"->true;default->false;}; }
     private EnumMap<LandmarkName, Landmark> forwardFold() {

@@ -8,6 +8,7 @@ public interface LandmarkSource extends AutoCloseable {
     default boolean isTransitioning() { return false; }
     default FaceDirection faceDirection() { return FaceDirection.FRONT; }
     default String transitionGuidance() { return "Move slowly into the next position."; }
+    default double spineBend() { return 0; }
     String description();
     @Override default void close() {}
 }
