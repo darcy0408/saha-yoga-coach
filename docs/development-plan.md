@@ -39,6 +39,8 @@ All versions are pinned. Before submission, run a dependency audit and revalidat
 
 ## Delivery phases
 
+Pose illustration accuracy and transition work follows the dedicated [pose accuracy implementation plan](pose-accuracy-implementation-plan.md). Its review gate overrides pose-count goals: an unreviewed visual remains written-only and cannot appear as instructional artwork.
+
 ### Phase 1 — contest-ready minimum
 
 1. Project/build and documentation scaffold.
