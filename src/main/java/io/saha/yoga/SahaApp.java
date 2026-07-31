@@ -192,7 +192,11 @@ public final class SahaApp extends Application {
                 ? "Reference-validated teaching illustration"
                 : "Illustration under review. Follow the written setup or skip this pose.");
         boundary.setWrapText(true); boundary.getStyleClass().add(illustrations.reviewed(item.pose().id()).isPresent() ? "visual-approved" : "visual-review-warning");
-        teachingView.getChildren().addAll(heading, title, instruction, review, boundary);
+        var support = new Label(status.map(value -> "Required support: " + value.grounding().requiredContacts().stream().map(contact -> contact.name().toLowerCase().replace('_', ' ')).sorted().reduce((a, b) -> a + ", " + b).orElse("not defined")).orElse("Required support is still being defined."));
+        support.setWrapText(true); support.getStyleClass().add("support-label");
+        var spacer = new Region(); VBox.setVgrow(spacer, Priority.ALWAYS);
+        var floor = new Label("FLOOR / SUPPORT SURFACE"); floor.setMaxWidth(Double.MAX_VALUE); floor.getStyleClass().add("teaching-floor");
+        teachingView.getChildren().addAll(heading, title, instruction, review, boundary, support, spacer, floor);
     }
     private void updatePracticePath() {
         if (practicePath == null) return;
@@ -245,6 +249,12 @@ public final class SahaApp extends Application {
         double scale = Math.min(w, h);
         double offsetX = (w - scale) / 2;
         double offsetY = (h - scale) / 2;
+        double floorY = offsetY + scale * .96;
+        var floor = new Line(offsetX + scale * .04, floorY, offsetX + scale * .96, floorY);
+        floor.setStroke(Color.web("#6fa89d")); floor.setStrokeWidth(2); floor.getStrokeDashArray().addAll(8.0, 6.0);
+        bodyView.getChildren().add(floor);
+        var floorLabel = new Text(offsetX + scale * .05, floorY - 6, "floor reference"); floorLabel.setFill(Color.web("#86aaa3"));
+        bodyView.getChildren().add(floorLabel);
         var links = List.of(new LandmarkName[]{LandmarkName.LEFT_SHOULDER,LandmarkName.RIGHT_SHOULDER}, new LandmarkName[]{LandmarkName.LEFT_HIP,LandmarkName.RIGHT_HIP}, new LandmarkName[]{LandmarkName.LEFT_HIP,LandmarkName.LEFT_KNEE}, new LandmarkName[]{LandmarkName.LEFT_KNEE,LandmarkName.LEFT_ANKLE}, new LandmarkName[]{LandmarkName.LEFT_ANKLE,LandmarkName.LEFT_TOE}, new LandmarkName[]{LandmarkName.RIGHT_HIP,LandmarkName.RIGHT_KNEE}, new LandmarkName[]{LandmarkName.RIGHT_KNEE,LandmarkName.RIGHT_ANKLE}, new LandmarkName[]{LandmarkName.RIGHT_ANKLE,LandmarkName.RIGHT_TOE}, new LandmarkName[]{LandmarkName.LEFT_SHOULDER,LandmarkName.LEFT_ELBOW}, new LandmarkName[]{LandmarkName.LEFT_ELBOW,LandmarkName.LEFT_WRIST}, new LandmarkName[]{LandmarkName.LEFT_WRIST,LandmarkName.LEFT_HAND}, new LandmarkName[]{LandmarkName.RIGHT_SHOULDER,LandmarkName.RIGHT_ELBOW}, new LandmarkName[]{LandmarkName.RIGHT_ELBOW,LandmarkName.RIGHT_WRIST}, new LandmarkName[]{LandmarkName.RIGHT_WRIST,LandmarkName.RIGHT_HAND});
         for (var link : links) { var a=frame.landmarks().get(link[0]); var b=frame.landmarks().get(link[1]); if (a == null || b == null) continue; var line=new Line(offsetX+a.x()*scale,offsetY+a.y()*scale,offsetX+b.x()*scale,offsetY+b.y()*scale); line.setStroke(Color.web("#8dd7c6")); line.setStrokeWidth(5); bodyView.getChildren().add(line); }
         var leftHip=frame.landmarks().get(LandmarkName.LEFT_HIP);var rightHip=frame.landmarks().get(LandmarkName.RIGHT_HIP);
