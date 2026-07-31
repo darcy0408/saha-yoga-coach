@@ -11,6 +11,7 @@
 .button:hover { -fx-background-color: #40736b; }
 .primary { -fx-background-color: #e9b968; -fx-text-fill: #142522; -fx-font-weight: 700; }
 .danger { -fx-background-color: #9f4646; -fx-font-weight: 700; }
+.next { -fx-background-color: #4f847b; -fx-font-weight: 700; }
 .badge { -fx-text-fill: #f0c77e; -fx-font-size: 12px; -fx-font-weight: 700; }
 .notice { -fx-background-color: rgba(233,185,104,.12); -fx-padding: 14; -fx-background-radius: 9; }
 .check { -fx-text-fill: #8dd7c6; -fx-font-weight: 700; }

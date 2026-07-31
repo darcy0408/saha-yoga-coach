@@ -30,6 +30,9 @@ dependencies {
     testRuntimeOnly("org.junit.platform:junit-platform-launcher")
 }
 
-application { mainClass = "io.saha.yoga.SahaApp" }
+application {
+    mainClass = "io.saha.yoga.SahaApp"
+    applicationDefaultJvmArgs = listOf("--enable-native-access=javafx.graphics")
+}
 
 tasks.test { useJUnitPlatform() }

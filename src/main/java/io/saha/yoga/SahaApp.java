@@ -92,12 +92,18 @@ public final class SahaApp extends Application {
         poseLabel = new Label(); poseLabel.getStyleClass().add("hero-small"); phaseLabel = new Label(); phaseLabel.getStyleClass().add("badge");
         statusLabel = new Label(); statusLabel.getStyleClass().add("status"); suggestionLabel = wrapLabel(); optionalLabel = wrapLabel(); confidenceLabel = new Label(); timerLabel = new Label(); timerLabel.getStyleClass().add("timer");
         bodyView = createBodyView(); bodyView.setPrefSize(560, 500); bodyView.getStyleClass().add("camera");
-        var stop = new Button("Stop now"); stop.getStyleClass().add("danger"); stop.setOnAction(e -> finish(false));
-        var pause = new Button("Pause"); pause.setOnAction(e -> { paused = !paused; pause.setText(paused ? "Resume" : "Pause"); });
-        var repeat = new Button("Repeat cue"); repeat.setOnAction(e -> suggestionLabel.requestFocus());
-        var easier = new Button("Easier option"); easier.setOnAction(e -> optionalLabel.setText("Optional adjustment: " + current().pose().modifications().getFirst()));
-        var skip = new Button("Skip"); skip.setOnAction(e -> advance(true));
-        var controls = new HBox(10, pause, repeat, easier, skip, stop); controls.setAlignment(Pos.CENTER_LEFT);
+        var stop = actionButton("Stop now"); stop.getStyleClass().add("danger"); stop.setOnAction(e -> finish(false));
+        var pause = actionButton("Pause"); pause.setOnAction(e -> { paused = !paused; pause.setText(paused ? "Resume" : "Pause"); });
+        var repeat = actionButton("Repeat cue"); repeat.setOnAction(e -> suggestionLabel.requestFocus());
+        var easier = actionButton("Easier option"); easier.setOnAction(e -> optionalLabel.setText("Optional adjustment: " + current().pose().modifications().getFirst()));
+        var next = actionButton("Next pose"); next.getStyleClass().add("next"); next.setOnAction(e -> advance(true));
+        var controls = new GridPane(); controls.setHgap(10); controls.setVgap(10);
+        var leftColumn = new ColumnConstraints(); leftColumn.setPercentWidth(50);
+        var rightColumn = new ColumnConstraints(); rightColumn.setPercentWidth(50);
+        controls.getColumnConstraints().addAll(leftColumn, rightColumn);
+        controls.add(pause, 0, 0); controls.add(repeat, 1, 0);
+        controls.add(easier, 0, 1); controls.add(next, 1, 1);
+        controls.add(stop, 0, 2, 2, 1);
         var feedback = new VBox(10, phaseLabel, poseLabel, timerLabel, statusLabel, suggestionLabel, optionalLabel, confidenceLabel, new Separator(), new Label("Why this routine changed"), new Label(String.join(" ", routine.explanations())), controls); feedback.getStyleClass().add("card"); feedback.setMaxWidth(440);
         var page = new BorderPane(bodyView, null, feedback, null, null); page.setPadding(new Insets(35)); BorderPane.setMargin(feedback, new Insets(0, 0, 0, 25)); page.getStyleClass().add("page");
         setPage(page); updatePose();
@@ -105,6 +111,7 @@ public final class SahaApp extends Application {
     }
 
     private Label wrapLabel() { var label = new Label(); label.setWrapText(true); return label; }
+    private Button actionButton(String text) { var button = new Button(text); button.setMaxWidth(Double.MAX_VALUE); return button; }
     private RoutineItem current() { return routine.items().get(itemIndex); }
     private void tick() {
         var frame = landmarks.nextFrame(); drawFrame(frame); var result = analyzer.analyze(current().pose(), frame);
@@ -155,6 +162,15 @@ public final class SahaApp extends Application {
         var links = List.of(new LandmarkName[]{LandmarkName.LEFT_SHOULDER,LandmarkName.RIGHT_SHOULDER}, new LandmarkName[]{LandmarkName.LEFT_SHOULDER,LandmarkName.LEFT_HIP}, new LandmarkName[]{LandmarkName.RIGHT_SHOULDER,LandmarkName.RIGHT_HIP}, new LandmarkName[]{LandmarkName.LEFT_HIP,LandmarkName.RIGHT_HIP}, new LandmarkName[]{LandmarkName.LEFT_HIP,LandmarkName.LEFT_KNEE}, new LandmarkName[]{LandmarkName.LEFT_KNEE,LandmarkName.LEFT_ANKLE}, new LandmarkName[]{LandmarkName.RIGHT_HIP,LandmarkName.RIGHT_KNEE}, new LandmarkName[]{LandmarkName.RIGHT_KNEE,LandmarkName.RIGHT_ANKLE}, new LandmarkName[]{LandmarkName.LEFT_SHOULDER,LandmarkName.LEFT_ELBOW}, new LandmarkName[]{LandmarkName.LEFT_ELBOW,LandmarkName.LEFT_WRIST}, new LandmarkName[]{LandmarkName.RIGHT_SHOULDER,LandmarkName.RIGHT_ELBOW}, new LandmarkName[]{LandmarkName.RIGHT_ELBOW,LandmarkName.RIGHT_WRIST});
         for (var link : links) { var a=frame.landmarks().get(link[0]); var b=frame.landmarks().get(link[1]); var line=new Line(a.x()*w,a.y()*h,b.x()*w,b.y()*h); line.setStroke(Color.web("#8dd7c6")); line.setStrokeWidth(5); bodyView.getChildren().add(line); }
         frame.landmarks().values().forEach(p -> { var circle=new Circle(p.x()*w,p.y()*h,6,Color.web("#f4c77a")); bodyView.getChildren().add(circle); });
+        var nose = frame.landmarks().get(LandmarkName.NOSE);
+        var leftShoulder = frame.landmarks().get(LandmarkName.LEFT_SHOULDER);
+        var rightShoulder = frame.landmarks().get(LandmarkName.RIGHT_SHOULDER);
+        var head = new Circle(nose.x()*w, nose.y()*h, Math.max(18, w*.032), Color.TRANSPARENT);
+        head.setStroke(Color.web("#8dd7c6")); head.setStrokeWidth(5);
+        var neck = new Line(nose.x()*w, (nose.y()*h)+Math.max(18, w*.032),
+                ((leftShoulder.x()+rightShoulder.x())/2)*w, ((leftShoulder.y()+rightShoulder.y())/2)*h);
+        neck.setStroke(Color.web("#8dd7c6")); neck.setStrokeWidth(5);
+        bodyView.getChildren().addAll(neck, head);
         var label = new Text(18, 28, landmarks.description()); label.setFill(Color.web("#b7c8c5")); bodyView.getChildren().add(label);
     }
 
