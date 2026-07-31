@@ -141,7 +141,13 @@ public final class SahaApp extends Application {
     }
     private String level(double value) { return value >= .85 ? "High" : value >= .70 ? "Medium" : "Low"; }
     private String format(int seconds) { return "%d:%02d".formatted(seconds / 60, seconds % 60); }
-    private void updatePose() { var item = current(); poseLabel.setText("Current pose: " + item.pose().displayName()); phaseLabel.setText(item.phase().toUpperCase()); timerLabel.setText(format(remaining)); }
+    private void updatePose() {
+        var item = current();
+        landmarks.selectPose(item.pose().id());
+        poseLabel.setText("Current pose: " + item.pose().displayName());
+        phaseLabel.setText(item.phase().toUpperCase()); timerLabel.setText(format(remaining));
+        drawFrame(landmarks.nextFrame());
+    }
     private void advance(boolean skipped) {
         saveMetric(skipped); if (++itemIndex >= routine.items().size()) { finish(true); return; }
         remaining = current().durationSeconds(); updatePose();
@@ -173,9 +179,11 @@ public final class SahaApp extends Application {
         var nose = frame.landmarks().get(LandmarkName.NOSE);
         var leftShoulder = frame.landmarks().get(LandmarkName.LEFT_SHOULDER);
         var rightShoulder = frame.landmarks().get(LandmarkName.RIGHT_SHOULDER);
-        var head = new Circle(nose.x()*w, nose.y()*h, Math.max(18, w*.032), Color.TRANSPARENT);
+        double headRadius = Math.max(22, h*.055);
+        double headCenterY = nose.y()*h + headRadius*.35;
+        var head = new Circle(nose.x()*w, headCenterY, headRadius, Color.TRANSPARENT);
         head.setStroke(Color.web("#8dd7c6")); head.setStrokeWidth(5);
-        var neck = new Line(nose.x()*w, (nose.y()*h)+Math.max(18, w*.032),
+        var neck = new Line(nose.x()*w, headCenterY + headRadius,
                 ((leftShoulder.x()+rightShoulder.x())/2)*w, ((leftShoulder.y()+rightShoulder.y())/2)*h);
         neck.setStroke(Color.web("#8dd7c6")); neck.setStrokeWidth(5);
         bodyView.getChildren().addAll(neck, head);
