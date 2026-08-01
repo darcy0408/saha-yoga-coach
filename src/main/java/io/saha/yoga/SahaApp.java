@@ -51,7 +51,9 @@ public final class SahaApp extends Application {
     @Override public void start(Stage primaryStage) {
         stage = primaryStage; stage.setTitle("Saha · personal yoga coach");
         stage.setMinWidth(900); stage.setMinHeight(650);
-        showWelcome(); stage.show();
+        if (getParameters().getRaw().contains("--pose-gallery")) showPoseGallery();
+        else showWelcome();
+        stage.show();
     }
 
     private void setPage(Region content) {

@@ -59,16 +59,16 @@ public final class TeachingPoseDraftView extends Pane {
         var nose = line(head[0]+width*.027,head[1],head[0]+width*.045,head[1]+height*.006,2.5,JOINT);
         getChildren().addAll(eye,nose);
 
-        var label = new Text(width*.68,height*.08,"DRAFT · REVIEW ONLY"); label.setFill(Color.web("#9f4646"));
+        var label = new Text(width*.56,height*.08,"DRAFT · REVIEW ONLY"); label.setFill(Color.web("#9f4646"));
         getChildren().add(label);
     }
 
     private void arm(BodyAnchor elbow, BodyAnchor hand, double width, double height, Color color) {
-        limb(SHOULDER,elbow,width,height,9,color); limb(elbow,hand,width,height,8,color); joint(elbow,width,height); joint(hand,width,height);
+        limb(SHOULDER,elbow,width,height,9,color); limb(elbow,hand,width,height,8,color); joint(elbow,width,height); hand(hand,width,height,color);
     }
 
     private void leg(BodyAnchor knee, BodyAnchor ankle, BodyAnchor heel, BodyAnchor toe, double width, double height, Color color) {
-        limb(knee,ankle,width,height,12,color); limb(ankle,heel,width,height,8,color); limb(heel,toe,width,height,11,color);
+        limb(knee,ankle,width,height,10,color); limb(ankle,heel,width,height,7,color); limb(heel,toe,width,height,7,color);
         joint(knee,width,height); joint(ankle,width,height);
     }
 
@@ -82,4 +82,7 @@ public final class TeachingPoseDraftView extends Pane {
     }
     private double[] point(BodyAnchor anchor,double width,double height) { var p=draft.point(anchor); return new double[]{p.x()*width,p.y()*height}; }
     private void joint(BodyAnchor anchor,double width,double height) { var p=point(anchor,width,height); getChildren().add(new Circle(p[0],p[1],4,JOINT)); }
+    private void hand(BodyAnchor anchor,double width,double height,Color color) {
+        var p=point(anchor,width,height); var palm=new Ellipse(p[0],p[1],5.5,8); palm.setFill(Color.web("#f1c27d")); palm.setStroke(color); palm.setStrokeWidth(2); getChildren().add(palm);
+    }
 }

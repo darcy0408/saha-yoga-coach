@@ -36,3 +36,12 @@ application {
 }
 
 tasks.test { useJUnitPlatform() }
+
+tasks.register<JavaExec>("poseGallerySnapshot") {
+    group = "verification"
+    description = "Renders the grounded teaching pose gallery to build/review/pose-gallery.png"
+    classpath = sourceSets.main.get().runtimeClasspath
+    mainClass = "io.saha.yoga.illustration.PoseGallerySnapshotLauncher"
+    args(layout.buildDirectory.file("review/pose-gallery.png").get().asFile.absolutePath)
+    jvmArgs("--enable-native-access=ALL-UNNAMED")
+}

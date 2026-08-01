@@ -13,12 +13,15 @@ class TeachingPoseDraftCatalogTest {
             for (var contact : new BodyAnchor[]{FRONT_HEEL, FRONT_TOE, REAR_HEEL, REAR_TOE}) {
                 assertEquals(pose.floorY(), pose.point(contact).y(), .001, pose.poseId()+" "+contact+" must touch floor");
             }
+            assertTrue(pose.point(FRONT_TOE).x()-pose.point(FRONT_HEEL).x() <= .11, pose.poseId()+" front foot stays proportionate");
+            assertTrue(pose.point(REAR_TOE).x()-pose.point(REAR_HEEL).x() <= .11, pose.poseId()+" rear foot stays proportionate");
         }
     }
 
     @Test void chairHasARecognizableGroundedSeatShape() {
         var chair = catalog.require("chair");
         assertTrue(chair.point(HIP).x() < chair.point(FRONT_KNEE).x(), "hips move behind knees");
+        assertTrue(chair.point(FRONT_KNEE).y()-chair.point(HIP).y() <= .05, "thigh approaches horizontal in a visible squat");
         assertEquals(chair.point(FRONT_KNEE).x(), chair.point(FRONT_ANKLE).x(), .025, "front shin is nearly vertical");
         assertTrue(chair.point(FRONT_HAND).y() < chair.point(SHOULDER).y(), "arms reach overhead");
     }

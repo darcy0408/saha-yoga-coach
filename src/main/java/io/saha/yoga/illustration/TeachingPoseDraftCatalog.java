@@ -23,28 +23,28 @@ public final class TeachingPoseDraftCatalog {
 
     private static TeachingPoseDraft chair() {
         var p = points();
-        at(p, HEAD,.46,.18); at(p,NECK,.45,.27); at(p,SHOULDER,.45,.33); at(p,HIP,.34,.55);
+        at(p, HEAD,.46,.18); at(p,NECK,.45,.27); at(p,SHOULDER,.45,.33); at(p,HIP,.34,.61);
         at(p,FRONT_ELBOW,.49,.19); at(p,FRONT_HAND,.51,.07); at(p,REAR_ELBOW,.44,.18); at(p,REAR_HAND,.46,.06);
-        at(p,FRONT_KNEE,.57,.67); at(p,FRONT_ANKLE,.58,.87); at(p,FRONT_HEEL,.54,FLOOR); at(p,FRONT_TOE,.67,FLOOR);
-        at(p,REAR_KNEE,.53,.68); at(p,REAR_ANKLE,.54,.87); at(p,REAR_HEEL,.50,FLOOR); at(p,REAR_TOE,.62,FLOOR);
+        at(p,FRONT_KNEE,.57,.65); at(p,FRONT_ANKLE,.58,.87); at(p,FRONT_HEEL,.55,FLOOR); at(p,FRONT_TOE,.64,FLOOR);
+        at(p,REAR_KNEE,.53,.66); at(p,REAR_ANKLE,.54,.87); at(p,REAR_HEEL,.51,FLOOR); at(p,REAR_TOE,.60,FLOOR);
         return new TeachingPoseDraft("chair","Chair","Side view","Forward",FLOOR,p);
     }
 
     private static TeachingPoseDraft warriorOne() {
         var p = points();
-        at(p,HEAD,.50,.17); at(p,NECK,.49,.27); at(p,SHOULDER,.49,.32); at(p,HIP,.47,.53);
+        at(p,HEAD,.50,.17); at(p,NECK,.49,.27); at(p,SHOULDER,.49,.32); at(p,HIP,.46,.59);
         at(p,FRONT_ELBOW,.54,.18); at(p,FRONT_HAND,.53,.06); at(p,REAR_ELBOW,.45,.18); at(p,REAR_HAND,.47,.06);
-        at(p,FRONT_KNEE,.68,.65); at(p,FRONT_ANKLE,.68,.87); at(p,FRONT_HEEL,.64,FLOOR); at(p,FRONT_TOE,.80,FLOOR);
-        at(p,REAR_KNEE,.31,.70); at(p,REAR_ANKLE,.19,.87); at(p,REAR_HEEL,.16,FLOOR); at(p,REAR_TOE,.31,FLOOR);
+        at(p,FRONT_KNEE,.67,.61); at(p,FRONT_ANKLE,.67,.87); at(p,FRONT_HEEL,.64,FLOOR); at(p,FRONT_TOE,.74,FLOOR);
+        at(p,REAR_KNEE,.31,.72); at(p,REAR_ANKLE,.19,.87); at(p,REAR_HEEL,.16,FLOOR); at(p,REAR_TOE,.26,FLOOR);
         return new TeachingPoseDraft("warrior_one","Warrior I","Three-quarter view","Forward",FLOOR,p);
     }
 
     private static TeachingPoseDraft warriorTwo() {
         var p = points();
-        at(p,HEAD,.52,.18); at(p,NECK,.49,.27); at(p,SHOULDER,.48,.32); at(p,HIP,.47,.53);
+        at(p,HEAD,.52,.18); at(p,NECK,.49,.27); at(p,SHOULDER,.48,.32); at(p,HIP,.46,.59);
         at(p,FRONT_ELBOW,.66,.31); at(p,FRONT_HAND,.83,.31); at(p,REAR_ELBOW,.31,.31); at(p,REAR_HAND,.14,.31);
-        at(p,FRONT_KNEE,.68,.65); at(p,FRONT_ANKLE,.68,.87); at(p,FRONT_HEEL,.64,FLOOR); at(p,FRONT_TOE,.81,FLOOR);
-        at(p,REAR_KNEE,.32,.69); at(p,REAR_ANKLE,.18,.87); at(p,REAR_HEEL,.15,FLOOR); at(p,REAR_TOE,.30,FLOOR);
+        at(p,FRONT_KNEE,.67,.61); at(p,FRONT_ANKLE,.67,.87); at(p,FRONT_HEEL,.64,FLOOR); at(p,FRONT_TOE,.74,FLOOR);
+        at(p,REAR_KNEE,.31,.72); at(p,REAR_ANKLE,.18,.87); at(p,REAR_HEEL,.15,FLOOR); at(p,REAR_TOE,.25,FLOOR);
         return new TeachingPoseDraft("warrior_two","Warrior II","Three-quarter view","Over front hand",FLOOR,p);
     }
 
