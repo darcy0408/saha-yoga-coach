@@ -51,3 +51,5 @@
 .teaching-floor { -fx-border-color: #725b25 transparent transparent transparent; -fx-border-width: 3 0 0 0; -fx-padding: 5 0 0 0; -fx-font-size: 10px; -fx-font-weight: 700; -fx-text-fill: #725b25; }
 .camera-observation { -fx-background-color: #091817; -fx-background-radius: 14; -fx-border-color: #315a54; -fx-border-radius: 14; -fx-border-width: 2; }
 .observation-title { -fx-font-size: 10px; -fx-font-weight: 700; -fx-text-fill: #b7c8c5; }
+.pose-draft-card { -fx-background-color: #f5efe1; -fx-background-radius: 16; -fx-padding: 16; -fx-border-color: #d6c79e; -fx-border-radius: 16; -fx-border-width: 2; }
+.pose-draft-canvas { -fx-background-color: #fffaf0; -fx-background-radius: 10; -fx-border-color: #dfd1ad; -fx-border-radius: 10; }

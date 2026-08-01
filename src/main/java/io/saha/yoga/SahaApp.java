@@ -2,7 +2,7 @@ package io.saha.yoga;
 
 import io.saha.yoga.analysis.*;
 import io.saha.yoga.domain.*;
-import io.saha.yoga.illustration.PoseIllustrationRegistry;
+import io.saha.yoga.illustration.*;
 import io.saha.yoga.personalization.PersonalizationEngine;
 import io.saha.yoga.routine.*;
 import io.saha.yoga.storage.*;
@@ -34,6 +34,7 @@ public final class SahaApp extends Application {
     private final PoseAnalyzer analyzer = new PoseAnalyzer();
     private final LandmarkSource landmarks = new DemoLandmarkSource();
     private final PoseIllustrationRegistry illustrations = new PoseIllustrationRegistry();
+    private final TeachingPoseDraftCatalog teachingDrafts = new TeachingPoseDraftCatalog();
     private final SessionStore store = new JsonSessionStore(Path.of(System.getProperty("user.home"), ".saha", "sessions.json"));
     private Stage stage;
     private Routine routine;
@@ -92,9 +93,29 @@ public final class SahaApp extends Application {
         var badge = new Label("DEMO MODE · no camera required"); badge.getStyleClass().add("badge");
         var note = new Label("Camera integration is safely unavailable until a compatible ONNX pose model is installed. The demonstration uses prerecorded-style synthetic landmarks and exercises the same analysis pipeline."); note.setWrapText(true);
         var begin = new Button("Start Steady Start"); begin.getStyleClass().add("primary"); begin.setOnAction(e -> beginRoutine());
-        var left = new VBox(18, title, guide, badge, note, begin); left.setMaxWidth(470);
+        var review = new Button("Review teaching pose drafts"); review.setOnAction(e -> showPoseGallery());
+        var left = new VBox(18, title, guide, badge, note, new HBox(10, begin, review)); left.setMaxWidth(520);
         var page = new BorderPane(preview, null, null, null, left); page.setPadding(new Insets(50)); BorderPane.setMargin(left, new Insets(0, 35, 0, 0)); page.getStyleClass().add("page");
         drawFrame(landmarks.nextFrame()); setPage(page);
+    }
+
+    private void showPoseGallery() {
+        var title = new Label("Grounded teaching pose drafts"); title.getStyleClass().add("title");
+        var intro = new Label("These hand-authored drafts are separate from camera landmarks. They are not enabled during coaching until their anatomy, floor contacts, and instructions are reviewed."); intro.setWrapText(true); intro.setMaxWidth(1050); intro.getStyleClass().add("lead");
+        var gallery = new TilePane(); gallery.setHgap(18); gallery.setVgap(18); gallery.setPrefColumns(3); gallery.setPrefTileWidth(370); gallery.setPrefTileHeight(430);
+        for (var draft : teachingDrafts.all()) gallery.getChildren().add(poseDraftCard(draft));
+        var back = new Button("Back to camera setup"); back.getStyleClass().add("primary"); back.setOnAction(e -> showCalibration());
+        var page = new VBox(18, title, intro, gallery, back); page.setPadding(new Insets(35)); page.getStyleClass().add("page");
+        setPage(scrollable(page));
+    }
+
+    private VBox poseDraftCard(TeachingPoseDraft draft) {
+        var name = new Label(draft.displayName()); name.getStyleClass().add("teaching-pose-name");
+        var view = new Label(draft.view() + " · gaze: " + draft.gaze()); view.getStyleClass().add("teaching-review");
+        var art = new TeachingPoseDraftView(draft); art.getStyleClass().add("pose-draft-canvas");
+        var contacts = new Label("Grounding check: both required feet meet the support surface."); contacts.setWrapText(true); contacts.getStyleClass().add("support-label");
+        var card = new VBox(7, name, view, art, contacts); card.getStyleClass().add("pose-draft-card");
+        return card;
     }
 
     private HBox check(String value) { var dot = new Label("✓"); dot.getStyleClass().add("check"); var text = new Label(value); text.setWrapText(true); return new HBox(10, dot, text); }
