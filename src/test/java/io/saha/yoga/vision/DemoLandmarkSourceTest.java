@@ -56,6 +56,39 @@ class DemoLandmarkSourceTest {
         assertEquals(triangle.get(LandmarkName.LEFT_HAND).x(),triangle.get(LandmarkName.LEFT_KNEE).x(),.10,"lower hand reaches toward shin");
     }
 
+    @Test void everyPoseRestsOnTheFloorReference() {
+        var source = new DemoLandmarkSource();
+        for (var pose : new PoseCatalog().all()) {
+            source.selectPose(pose.id());
+            var p = source.targetFrame().landmarks();
+            double lowest = p.values().stream().mapToDouble(Landmark::y).max().orElseThrow();
+            assertEquals(LandmarkSource.FLOOR_Y, lowest, 1e-9,
+                    pose.id() + " should touch the floor the view draws, not float above it");
+            p.forEach((name, mark) -> assertTrue(mark.y() <= LandmarkSource.FLOOR_Y + 1e-9,
+                    pose.id() + " " + name + " sank through the floor"));
+        }
+    }
+
+    @Test void theDisplayedFrameIsGroundedToo() {
+        // the view draws nextFrame(), not targetFrame(): grounding the target
+        // alone would still leave every animated frame floating
+        var source = new DemoLandmarkSource();
+        source.selectPose("warrior_two");
+        for (int i = 0; i < 3; i++) {
+            var p = source.nextFrame().landmarks();
+            double lowest = p.values().stream().mapToDouble(Landmark::y).max().orElseThrow();
+            assertEquals(LandmarkSource.FLOOR_Y, lowest, 1e-9, "displayed frame " + i + " floats");
+        }
+    }
+
+    @Test void mountainStandsOnBothFeet() {
+        var source = new DemoLandmarkSource();
+        source.selectPose("mountain");
+        var p = source.targetFrame().landmarks();
+        assertEquals(LandmarkSource.FLOOR_Y, p.get(LandmarkName.LEFT_TOE).y(), .001, "left foot down");
+        assertEquals(LandmarkSource.FLOOR_Y, p.get(LandmarkName.RIGHT_TOE).y(), .001, "right foot down");
+    }
+
     private void assertLength(Landmark a, Landmark b, double expected, String message) {
         double length = Math.hypot(a.x()-b.x(), a.y()-b.y());
         assertEquals(expected,length,.001,message);

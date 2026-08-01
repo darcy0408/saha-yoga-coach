@@ -249,7 +249,9 @@ public final class SahaApp extends Application {
         double scale = Math.min(w, h);
         double offsetX = (w - scale) / 2;
         double offsetY = (h - scale) / 2;
-        double floorY = offsetY + scale * .96;
+        // the same plane the landmark source grounds poses to, so the body
+        // rests on this line instead of floating relative to it
+        double floorY = offsetY + scale * LandmarkSource.FLOOR_Y;
         var floor = new Line(offsetX + scale * .04, floorY, offsetX + scale * .96, floorY);
         floor.setStroke(Color.web("#6fa89d")); floor.setStrokeWidth(2); floor.getStrokeDashArray().addAll(8.0, 6.0);
         bodyView.getChildren().add(floor);

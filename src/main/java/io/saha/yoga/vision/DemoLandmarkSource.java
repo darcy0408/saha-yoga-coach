@@ -35,6 +35,7 @@ public final class DemoLandmarkSource implements LandmarkSource {
             double part=(progress-.5)*2; displayed=interpolate(transitionWaypoint,target,part*part*(3-2*part));
         }
         constrain(displayed, facing);
+        ground(displayed);
         frame++;
         return new LandmarkFrame(Instant.now(), displayed);
     }
@@ -56,7 +57,32 @@ public final class DemoLandmarkSource implements LandmarkSource {
             default -> { }
         }
         constrain(points, facingFor(id));
+        ground(points);
         return points;
+    }
+
+    /**
+     * Rest the figure on the floor reference line.
+     *
+     * constrain() rebuilds every limb outward from the hips at fixed bone
+     * lengths, so a pose's authored foot and hand positions do not survive it:
+     * each limb ends wherever its chain reaches. Nothing then relates the body
+     * to the floor the view draws at a fixed height, so each pose floated above
+     * it or sank through it by its own arbitrary amount.
+     *
+     * Shifting every point by the same amount fixes that without touching the
+     * pose itself: a translation preserves every bone length, angle and
+     * left/right relationship, so the only thing that changes is how high the
+     * body sits. The shift is taken from the LOWEST point, which is the one
+     * bearing weight -- the standing foot in tree, the supporting hand and knee
+     * in bird dog -- so the parts that should be on the floor land on it and
+     * nothing is left hanging through it.
+     */
+    private void ground(EnumMap<LandmarkName, Landmark> p) {
+        if (p.isEmpty()) return;
+        double lowest = p.values().stream().mapToDouble(Landmark::y).max().orElse(LandmarkSource.FLOOR_Y);
+        double shift = LandmarkSource.FLOOR_Y - lowest;
+        p.replaceAll((name, mark) -> new Landmark(mark.x(), mark.y() + shift, mark.confidence()));
     }
     private EnumMap<LandmarkName, Landmark> interpolate(Map<LandmarkName, Landmark> from, Map<LandmarkName, Landmark> to, double amount) {
         var result = new EnumMap<LandmarkName, Landmark>(LandmarkName.class);
