@@ -104,9 +104,9 @@ public final class SahaApp extends Application {
         stopCameraPreview();
         var title = new Label("Set up your space"); title.getStyleClass().add("title");
         var guide = new VBox(12, check("Place the camera around hip height."), check("Step back until your whole body fits."), check("Face a light source; avoid a bright window behind you."), check("Clear enough floor space to step in every direction.")); guide.getStyleClass().add("card");
-        var preview = createBodyView(); bodyView = preview; preview.setPrefSize(480, 390); preview.getStyleClass().add("camera");
-        cameraPreview = new ImageView(); cameraPreview.setPreserveRatio(true); cameraPreview.setFitWidth(480); cameraPreview.setFitHeight(390); cameraPreview.setVisible(false);
-        var previewStack = new StackPane(preview, cameraPreview); previewStack.setPrefSize(480, 390); previewStack.getStyleClass().add("camera");
+        var preview = createBodyView(); bodyView = preview; preview.setPrefSize(560, 460);
+        cameraPreview = new ImageView(); cameraPreview.setPreserveRatio(true); cameraPreview.setFitWidth(560); cameraPreview.setFitHeight(460); cameraPreview.setVisible(false);
+        var previewStack = new StackPane(preview, cameraPreview); previewStack.setPrefSize(560, 460); previewStack.setMaxSize(620, 520); previewStack.getStyleClass().add("camera");
         var badge = new Label("DEMO COACHING · local camera preview optional"); badge.getStyleClass().add("badge");
         cameraStatus = new Label("No camera is opened unless you choose the preview below."); cameraStatus.setWrapText(true);
         var note = new Label("Camera preview stays on this device and is never recorded. Until a verified ONNX pose model is installed, coaching continues with synthetic demonstration landmarks and does not claim to analyze the preview."); note.setWrapText(true);
@@ -201,7 +201,7 @@ public final class SahaApp extends Application {
 
     private void showCoach() {
         poseLabel = new Label(); poseLabel.setWrapText(true); poseLabel.setMinHeight(Region.USE_PREF_SIZE); poseLabel.getStyleClass().add("hero-small"); phaseLabel = new Label(); phaseLabel.getStyleClass().add("badge");
-        statusLabel = new Label(); statusLabel.getStyleClass().add("status"); suggestionLabel = wrapLabel(); optionalLabel = wrapLabel(); confidenceLabel = new Label(); timerLabel = new Label(); timerLabel.getStyleClass().add("timer");
+        statusLabel = wrapLabel(); statusLabel.getStyleClass().add("status"); suggestionLabel = wrapLabel(); optionalLabel = wrapLabel(); confidenceLabel = wrapLabel(); timerLabel = new Label(); timerLabel.getStyleClass().add("timer");
         teachingView = new VBox(10); teachingView.setPrefSize(560, 270); teachingView.getStyleClass().add("teaching-view");
         bodyView = createBodyView(); bodyView.setPrefSize(560, 205); bodyView.getStyleClass().add("camera-observation");
         var stop = actionButton("Stop now"); stop.getStyleClass().add("danger"); stop.setOnAction(e -> finish(false));
@@ -217,7 +217,7 @@ public final class SahaApp extends Application {
         controls.add(easier, 0, 1); controls.add(next, 1, 1);
         controls.add(stop, 0, 2, 2, 1);
         var reasonText = wrapLabel(); reasonText.setMinHeight(Region.USE_PREF_SIZE); reasonText.setText(String.join(" ", routine.explanations()));
-        var feedback = new VBox(10, phaseLabel, poseLabel, timerLabel, statusLabel, suggestionLabel, optionalLabel, confidenceLabel, new Separator(), new Label("Why this routine changed"), reasonText, controls); feedback.getStyleClass().add("card"); feedback.setMaxWidth(440);
+        var feedback = new VBox(10, phaseLabel, poseLabel, timerLabel, statusLabel, suggestionLabel, optionalLabel, confidenceLabel, new Separator(), new Label("Why this routine changed"), reasonText, controls); feedback.getStyleClass().add("card"); feedback.setPrefWidth(470); feedback.setMaxWidth(540);
         var observationTitle = new Label("CAMERA OBSERVATION · SYNTHETIC DEMO · NOT AN EXAMPLE POSE"); observationTitle.getStyleClass().add("observation-title");
         var observation = new VBox(5, observationTitle, bodyView); VBox.setVgrow(bodyView, Priority.ALWAYS);
         var visualColumn = new VBox(12, teachingView, observation); VBox.setVgrow(teachingView, Priority.ALWAYS); VBox.setVgrow(observation, Priority.ALWAYS);
@@ -232,7 +232,7 @@ public final class SahaApp extends Application {
         clock = new Timeline(new KeyFrame(Duration.millis(100), e -> tick())); clock.setCycleCount(Timeline.INDEFINITE); clock.play();
     }
 
-    private Label wrapLabel() { var label = new Label(); label.setWrapText(true); return label; }
+    private Label wrapLabel() { var label = new Label(); label.setWrapText(true); label.setMaxWidth(Double.MAX_VALUE); label.setMinHeight(Region.USE_PREF_SIZE); return label; }
     private Button actionButton(String text) { var button = new Button(text); button.setMaxWidth(Double.MAX_VALUE); return button; }
     private RoutineItem current() { return routine.items().get(itemIndex); }
     private void tick() {
@@ -284,16 +284,16 @@ public final class SahaApp extends Application {
         teachingView.getChildren().clear();
         var heading = new Label("TEACHING GUIDE"); heading.getStyleClass().add("badge");
         var title = new Label(item.pose().displayName()); title.getStyleClass().add("teaching-pose-name");
-        var instruction = new Label(item.pose().instructions().getFirst()); instruction.setWrapText(true); instruction.getStyleClass().add("teaching-instruction");
+        var instruction = new Label(item.pose().instructions().getFirst()); instruction.setWrapText(true); instruction.setMinHeight(Region.USE_PREF_SIZE); instruction.getStyleClass().add("teaching-instruction");
         var status = illustrations.status(item.pose().id());
         var review = new Label(status.map(value -> value.requiredView() + " · visual " + value.reviewState().name().toLowerCase().replace('_', ' ')).orElse("Written guidance only · illustration not yet reviewed"));
-        review.setWrapText(true); review.getStyleClass().add("teaching-review");
+        review.setWrapText(true); review.setMinHeight(Region.USE_PREF_SIZE); review.getStyleClass().add("teaching-review");
         var boundary = new Label(illustrations.reviewed(item.pose().id()).isPresent()
                 ? "Reference-validated teaching illustration"
                 : "Illustration under review. Follow the written setup or skip this pose.");
-        boundary.setWrapText(true); boundary.getStyleClass().add(illustrations.reviewed(item.pose().id()).isPresent() ? "visual-approved" : "visual-review-warning");
+        boundary.setWrapText(true); boundary.setMinHeight(Region.USE_PREF_SIZE); boundary.getStyleClass().add(illustrations.reviewed(item.pose().id()).isPresent() ? "visual-approved" : "visual-review-warning");
         var support = new Label(status.map(value -> "Required support: " + value.grounding().requiredContacts().stream().map(contact -> contact.name().toLowerCase().replace('_', ' ')).sorted().reduce((a, b) -> a + ", " + b).orElse("not defined")).orElse("Required support is still being defined."));
-        support.setWrapText(true); support.getStyleClass().add("support-label");
+        support.setWrapText(true); support.setMinHeight(Region.USE_PREF_SIZE); support.getStyleClass().add("support-label");
         var spacer = new Region(); VBox.setVgrow(spacer, Priority.ALWAYS);
         var floor = new Label("FLOOR / SUPPORT SURFACE"); floor.setMaxWidth(Double.MAX_VALUE); floor.getStyleClass().add("teaching-floor");
         teachingView.getChildren().addAll(heading, title, instruction, review, boundary, support, spacer, floor);
@@ -346,7 +346,7 @@ public final class SahaApp extends Application {
         if (bodyView == null) return;
         bodyView.getChildren().clear();
         double w = Math.max(420, bodyView.getWidth()), h = Math.max(180, bodyView.getHeight());
-        double scale = Math.min(w, h);
+        double scale = Math.min(w * .92, h * .82);
         double offsetX = (w - scale) / 2;
         double offsetY = (h - scale) / 2;
         // the same plane the landmark source grounds poses to, so the body
