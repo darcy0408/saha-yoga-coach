@@ -8,6 +8,7 @@ import io.saha.yoga.routine.*;
 import io.saha.yoga.storage.*;
 import io.saha.yoga.vision.*;
 import javafx.animation.KeyFrame;
+import javafx.animation.PauseTransition;
 import javafx.animation.Timeline;
 import javafx.application.Application;
 import javafx.application.Platform;
@@ -57,6 +58,8 @@ public final class SahaApp extends Application {
     private CameraCapture cameraCapture;
     private ImageView cameraPreview;
     private Label cameraStatus;
+    private Button cameraButton;
+    private PauseTransition cameraOpenTimeout;
     private final AtomicReference<CameraFrame> pendingCameraFrame = new AtomicReference<>();
     private final AtomicBoolean cameraRenderPending = new AtomicBoolean();
 
@@ -108,12 +111,12 @@ public final class SahaApp extends Application {
         cameraPreview = new ImageView(); cameraPreview.setPreserveRatio(true); cameraPreview.setFitWidth(560); cameraPreview.setFitHeight(460); cameraPreview.setVisible(false);
         var previewStack = new StackPane(preview, cameraPreview); previewStack.setPrefSize(560, 460); previewStack.setMaxSize(620, 520); previewStack.getStyleClass().add("camera");
         var badge = new Label("DEMO COACHING · local camera preview optional"); badge.getStyleClass().add("badge");
-        cameraStatus = new Label("No camera is opened unless you choose the preview below."); cameraStatus.setWrapText(true);
+        cameraStatus = new Label("No camera is opened unless you choose the preview below."); cameraStatus.setWrapText(true); cameraStatus.setMinHeight(Region.USE_PREF_SIZE);
         var note = new Label("Camera preview stays on this device and is never recorded. Until a verified ONNX pose model is installed, coaching continues with synthetic demonstration landmarks and does not claim to analyze the preview."); note.setWrapText(true);
-        var tryCamera = new Button("Try local camera preview"); tryCamera.setOnAction(e -> startCameraPreview(0));
+        cameraButton = new Button("Try local camera preview"); cameraButton.setOnAction(e -> startCameraPreview(0));
         var begin = new Button("Start Steady Start"); begin.getStyleClass().add("primary"); begin.setOnAction(e -> beginRoutine());
         var review = new Button("Review teaching pose drafts"); review.setOnAction(e -> showPoseGallery());
-        var left = new VBox(18, title, guide, badge, cameraStatus, note, tryCamera, new HBox(10, begin, review)); left.setMaxWidth(520);
+        var left = new VBox(18, title, guide, badge, cameraStatus, note, cameraButton, new HBox(10, begin, review)); left.setMaxWidth(520);
         var page = new BorderPane(previewStack, null, null, null, left); page.setPadding(new Insets(50)); BorderPane.setMargin(left, new Insets(0, 35, 0, 0)); page.getStyleClass().add("page");
         drawFrame(landmarks.nextFrame()); setPage(page);
     }
@@ -121,12 +124,28 @@ public final class SahaApp extends Application {
     private void startCameraPreview(int deviceIndex) {
         stopCameraPreview();
         cameraStatus.setText("Opening camera " + deviceIndex + " locally...");
+        cameraStatus.getStyleClass().add("camera-status-active");
+        cameraButton.setDisable(true);
+        cameraButton.setText("Opening camera...");
         cameraCapture = new OpenCvCameraCapture(deviceIndex);
-        cameraCapture.start(this::showCameraFrame, message -> Platform.runLater(() -> {
+        cameraCapture.start(this::showCameraFrame,
+                message -> Platform.runLater(() -> cameraStatus.setText(message)),
+                message -> Platform.runLater(() -> {
             cameraPreview.setVisible(false);
             bodyView.setVisible(true);
             cameraStatus.setText(message + " Demo mode remains available.");
+            cameraButton.setDisable(false);
+            cameraButton.setText("Try camera again");
         }));
+        cameraOpenTimeout = new PauseTransition(Duration.seconds(8));
+        cameraOpenTimeout.setOnFinished(e -> {
+            if (cameraCapture != null && !cameraCapture.isOpen()) {
+                cameraStatus.setText("The camera is taking longer than expected to open. Check Settings > Privacy & security > Camera, close other camera apps, then try again.");
+                cameraButton.setDisable(false);
+                cameraButton.setText("Try camera again");
+            }
+        });
+        cameraOpenTimeout.play();
     }
 
     private void showCameraFrame(CameraFrame frame) {
@@ -142,6 +161,8 @@ public final class SahaApp extends Application {
                 cameraPreview.setVisible(true);
                 bodyView.setVisible(false);
                 cameraStatus.setText("Local preview active. Frames are transient and are not saved. Alignment analysis is still demo-only.");
+                cameraButton.setDisable(false);
+                cameraButton.setText("Restart camera preview");
             }
             cameraRenderPending.set(false);
             var next = pendingCameraFrame.get();
@@ -152,6 +173,8 @@ public final class SahaApp extends Application {
     private void stopCameraPreview() {
         if (cameraCapture != null) cameraCapture.close();
         cameraCapture = null;
+        if (cameraOpenTimeout != null) cameraOpenTimeout.stop();
+        cameraOpenTimeout = null;
         pendingCameraFrame.set(null);
     }
 

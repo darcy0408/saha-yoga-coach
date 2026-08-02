@@ -9,6 +9,7 @@
 .lead { -fx-font-size: 19px; -fx-text-fill: #bcd0ca; }
 .card { -fx-background-color: rgba(255,255,255,.08); -fx-background-radius: 16; -fx-padding: 22; -fx-border-color: rgba(255,255,255,.10); -fx-border-radius: 16; }
 .camera { -fx-background-color: #091817; -fx-background-radius: 20; -fx-border-color: #315a54; -fx-border-radius: 20; -fx-border-width: 2; }
+.camera-status-active { -fx-background-color: #203f3b; -fx-background-radius: 8; -fx-padding: 10; -fx-text-fill: #ffffff; }
 .button { -fx-background-color: #46766f; -fx-text-fill: #ffffff; -fx-background-radius: 9; -fx-padding: 11 16; -fx-cursor: hand; -fx-font-weight: 600; }
 .button:hover { -fx-background-color: #40736b; }
 .primary { -fx-background-color: #f2c66f; -fx-text-fill: #102523; -fx-font-weight: 700; }

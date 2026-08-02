@@ -22,23 +22,33 @@ public final class OpenCvCameraCapture implements CameraCapture {
         this.deviceIndex = deviceIndex;
     }
 
-    @Override public synchronized void start(Consumer<CameraFrame> frames, Consumer<String> failures) {
+    @Override public synchronized void start(Consumer<CameraFrame> frames, Consumer<String> status, Consumer<String> failures) {
         Objects.requireNonNull(frames, "frames");
+        Objects.requireNonNull(status, "status");
         Objects.requireNonNull(failures, "failures");
         if (!running.compareAndSet(false, true)) return;
-        worker = Thread.ofVirtual().name("saha-camera-capture").start(() -> captureLoop(frames, failures));
+        worker = Thread.ofVirtual().name("saha-camera-capture").start(() -> captureLoop(frames, status, failures));
     }
 
-    private void captureLoop(Consumer<CameraFrame> frames, Consumer<String> failures) {
+    private void captureLoop(Consumer<CameraFrame> frames, Consumer<String> status, Consumer<String> failures) {
         try {
+            status.accept("Loading the local OpenCV camera library...");
             OpenCV.loadLocally();
-            camera = new VideoCapture(deviceIndex);
+            status.accept("Opening camera " + deviceIndex + " with the Windows DirectShow backend...");
+            camera = new VideoCapture();
+            boolean opened = camera.open(deviceIndex, Videoio.CAP_DSHOW);
+            if (!opened) {
+                status.accept("DirectShow did not open camera " + deviceIndex + "; trying the automatic backend...");
+                opened = camera.open(deviceIndex, Videoio.CAP_ANY);
+            }
             camera.set(Videoio.CAP_PROP_FRAME_WIDTH, 640);
             camera.set(Videoio.CAP_PROP_FRAME_HEIGHT, 480);
-            if (!camera.isOpened()) {
+            camera.set(Videoio.CAP_PROP_BUFFERSIZE, 1);
+            if (!opened || !camera.isOpened()) {
                 failures.accept("Camera " + deviceIndex + " could not be opened. Check Windows camera permission or try another device.");
                 return;
             }
+            status.accept("Camera opened. Waiting for the first frame...");
             var bgr = new Mat();
             var bgra = new Mat();
             try {
