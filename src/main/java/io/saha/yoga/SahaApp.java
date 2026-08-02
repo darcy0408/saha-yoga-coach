@@ -14,6 +14,8 @@ import javafx.application.Platform;
 import javafx.geometry.*;
 import javafx.scene.Scene;
 import javafx.scene.control.*;
+import javafx.scene.image.Image;
+import javafx.scene.image.ImageView;
 import javafx.scene.layout.*;
 import javafx.scene.paint.Color;
 import javafx.scene.shape.Circle;
@@ -34,6 +36,7 @@ public final class SahaApp extends Application {
     private final PoseAnalyzer analyzer = new PoseAnalyzer();
     private final LandmarkSource landmarks = new DemoLandmarkSource();
     private final PoseIllustrationRegistry illustrations = new PoseIllustrationRegistry();
+    private final TeachingAssetCatalog teachingAssets = new TeachingAssetCatalog();
     private final TeachingPoseDraftCatalog teachingDrafts = new TeachingPoseDraftCatalog();
     private final SessionStore store = new JsonSessionStore(Path.of(System.getProperty("user.home"), ".saha", "sessions.json"));
     private Stage stage;
@@ -102,13 +105,29 @@ public final class SahaApp extends Application {
     }
 
     private void showPoseGallery() {
-        var title = new Label("Grounded teaching pose drafts"); title.getStyleClass().add("title");
-        var intro = new Label("These hand-authored drafts are separate from camera landmarks. They are not enabled during coaching until their anatomy, floor contacts, and instructions are reviewed."); intro.setWrapText(true); intro.setMaxWidth(1050); intro.getStyleClass().add("lead");
+        var title = new Label("Teaching pose review"); title.getStyleClass().add("title");
+        var intro = new Label("CC0 reference candidates are credited and kept separate from camera observations. They remain disabled during coaching until final visual approval."); intro.setWrapText(true); intro.setMaxWidth(1050); intro.getStyleClass().add("lead");
+        var candidatesTitle = new Label("LICENSED REFERENCE CANDIDATES"); candidatesTitle.getStyleClass().add("badge");
+        var candidates = new TilePane(); candidates.setHgap(18); candidates.setVgap(18); candidates.setPrefColumns(2); candidates.setPrefTileWidth(370);
+        teachingAssets.reviewCandidates().stream().map(this::teachingAssetCard).forEach(candidates.getChildren()::add);
+        var draftsTitle = new Label("ORIGINAL DIAGNOSTIC DRAFTS"); draftsTitle.getStyleClass().add("badge");
         var gallery = new TilePane(); gallery.setHgap(18); gallery.setVgap(18); gallery.setPrefColumns(3); gallery.setPrefTileWidth(370); gallery.setPrefTileHeight(430);
         for (var draft : teachingDrafts.all()) gallery.getChildren().add(poseDraftCard(draft));
         var back = new Button("Back to camera setup"); back.getStyleClass().add("primary"); back.setOnAction(e -> showCalibration());
-        var page = new VBox(18, title, intro, gallery, back); page.setPadding(new Insets(35)); page.getStyleClass().add("page");
+        var page = new VBox(18, title, intro, candidatesTitle, candidates, draftsTitle, gallery, back); page.setPadding(new Insets(35)); page.getStyleClass().add("page");
         setPage(scrollable(page));
+    }
+
+    private VBox teachingAssetCard(TeachingAsset asset) {
+        var name = new Label(asset.displayName()); name.getStyleClass().add("teaching-pose-name");
+        var stream = Objects.requireNonNull(SahaApp.class.getResourceAsStream(asset.resourcePath()));
+        var image = new Image(stream);
+        var art = new ImageView(image); art.setFitWidth(330); art.setFitHeight(270); art.setPreserveRatio(true);
+        var artPane = new StackPane(art); artPane.getStyleClass().add("licensed-art-canvas"); artPane.setPrefSize(340, 280);
+        var credit = new Label(asset.licenseName() + " · " + asset.creator()); credit.getStyleClass().add("teaching-review");
+        var state = new Label("REVIEWED CANDIDATE · COACHING USE OFF"); state.setWrapText(true); state.getStyleClass().add("visual-review-warning");
+        var note = new Label(asset.reviewNote()); note.setWrapText(true); note.getStyleClass().add("support-label");
+        return new VBox(7, name, credit, artPane, state, note);
     }
 
     private VBox poseDraftCard(TeachingPoseDraft draft) {
@@ -175,7 +194,7 @@ public final class SahaApp extends Application {
             return;
         }
         var result = analyzer.analyze(current().pose(), frame);
-        boolean reliable = result instanceof AnalysisResult.Reliable;
+        boolean mayTime = result instanceof AnalysisResult.Reliable || result instanceof AnalysisResult.InstructionOnly;
         switch (result) {
             case AnalysisResult.Reliable r -> {
                 statusLabel.setText("Status: " + r.status());
@@ -183,13 +202,19 @@ public final class SahaApp extends Application {
                 optionalLabel.setText("Optional adjustment: " + current().pose().modifications().getFirst());
                 confidenceLabel.setText("Confidence: " + level(r.confidence()));
             }
+            case AnalysisResult.InstructionOnly instruction -> {
+                statusLabel.setText("Status: Instruction only — alignment not measured");
+                suggestionLabel.setText("Guidance: " + instruction.guidance());
+                optionalLabel.setText("Optional adjustment: " + current().pose().modifications().getFirst());
+                confidenceLabel.setText("Camera visibility: " + level(instruction.confidence()));
+            }
             case AnalysisResult.Unreliable u -> {
                 statusLabel.setText("Status: Camera view needs attention"); suggestionLabel.setText("Primary suggestion: " + u.guidance());
                 optionalLabel.setText("Corrections are paused until the view improves."); confidenceLabel.setText("Confidence: Low");
             }
         }
-        if (!paused && reliable && ++clockTicks % 10 == 0 && --remaining <= 0) advance(false);
-        timerLabel.setText(format(remaining) + (paused || !reliable ? " · paused" : ""));
+        if (!paused && mayTime && ++clockTicks % 10 == 0 && --remaining <= 0) advance(false);
+        timerLabel.setText(format(remaining) + (paused || !mayTime ? " · paused" : ""));
     }
     private String level(double value) { return value >= .85 ? "High" : value >= .70 ? "Medium" : "Low"; }
     private String format(int seconds) { return "%d:%02d".formatted(seconds / 60, seconds % 60); }

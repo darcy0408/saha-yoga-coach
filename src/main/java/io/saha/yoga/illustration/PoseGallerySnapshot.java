@@ -6,8 +6,11 @@ import javafx.geometry.Insets;
 import javafx.scene.Scene;
 import javafx.scene.SnapshotParameters;
 import javafx.scene.control.Label;
+import javafx.scene.image.Image;
+import javafx.scene.image.ImageView;
 import javafx.scene.image.WritableImage;
 import javafx.scene.layout.HBox;
+import javafx.scene.layout.StackPane;
 import javafx.scene.layout.VBox;
 import javafx.scene.paint.Color;
 import javafx.stage.Stage;
@@ -22,17 +25,21 @@ public final class PoseGallerySnapshot extends Application {
         var gallery = new HBox(18);
         gallery.setPadding(new Insets(24));
         gallery.setStyle("-fx-background-color: #102523;");
-        for (var draft : new TeachingPoseDraftCatalog().all()) {
-            var title = new Label(draft.displayName()); title.getStyleClass().add("teaching-pose-name");
-            var subtitle = new Label(draft.view() + " · gaze: " + draft.gaze()); subtitle.getStyleClass().add("teaching-review");
-            var art = new TeachingPoseDraftView(draft); art.setPrefSize(360,330); art.getStyleClass().add("pose-draft-canvas");
-            var card = new VBox(7,title,subtitle,art); card.setPrefSize(380,390); card.getStyleClass().add("pose-draft-card");
+        for (var asset : new TeachingAssetCatalog().reviewCandidates()) {
+            var title = new Label(asset.displayName()); title.getStyleClass().add("teaching-pose-name");
+            var subtitle = new Label(asset.licenseName() + " · " + asset.creator()); subtitle.getStyleClass().add("teaching-review");
+            var stream = Objects.requireNonNull(getClass().getResourceAsStream(asset.resourcePath()));
+            var art = new ImageView(new Image(stream)); art.setFitWidth(330); art.setFitHeight(280); art.setPreserveRatio(true);
+            var artPane = new StackPane(art); artPane.setPrefSize(350,290); artPane.getStyleClass().add("licensed-art-canvas");
+            var state = new Label("REVIEWED CANDIDATE · COACHING USE OFF"); state.setWrapText(true); state.getStyleClass().add("visual-review-warning");
+            var note = new Label(asset.reviewNote()); note.setWrapText(true); note.getStyleClass().add("support-label");
+            var card = new VBox(7,title,subtitle,artPane,state,note); card.setPrefSize(430,430); card.getStyleClass().add("pose-draft-card");
             gallery.getChildren().add(card);
         }
-        var scene = new Scene(gallery, 1240, 450, Color.web("#102523"));
+        var scene = new Scene(gallery, 940, 500, Color.web("#102523"));
         scene.getStylesheets().add(Objects.requireNonNull(getClass().getResource("/io/saha/yoga/saha.css")).toExternalForm());
         gallery.applyCss(); gallery.layout();
-        var snapshot = gallery.snapshot(new SnapshotParameters(), new WritableImage(1240,450));
+        var snapshot = gallery.snapshot(new SnapshotParameters(), new WritableImage(940,500));
         var destination = new File(getParameters().getRaw().isEmpty() ? "build/review/pose-gallery.png" : getParameters().getRaw().getFirst());
         var parent = destination.getParentFile(); if (parent != null) parent.mkdirs();
         ImageIO.write(toBufferedImage(snapshot), "png", destination);

@@ -26,7 +26,7 @@ Live OpenCV capture and ONNX inference are intentionally disabled until the docu
 
 ## Java 26
 
-The build is pinned to a Java 26 Gradle toolchain. The code uses records for immutable measurements and events, sealed analysis outcomes with exhaustive pattern matching, modern collection factories, and virtual-thread-ready service boundaries. These features keep safety-relevant state explicit and make unreliable results impossible to treat accidentally as corrections. Gradle 9.4+ is required because it added Java 26 support.
+The build is pinned to a Java 26 Gradle toolchain and verified on Temurin 26.0.1. The immutable pose catalog uses Java 26's preview `LazyConstant` API so it is constructed once, on first use. The code also uses records for immutable measurements and events, plus sealed analysis outcomes with exhaustive pattern matching. The sealed result hierarchy distinguishes measured feedback, instruction-only guidance, and unreliable camera input so an unmeasured pose cannot accidentally receive a positive alignment claim. Gradle 9.4+ is required because it added Java 26 support; Gradle supplies `--enable-preview` for compile, test, and run tasks.
 
 ## Architecture
 

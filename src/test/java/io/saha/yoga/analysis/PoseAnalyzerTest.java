@@ -19,5 +19,44 @@ class PoseAnalyzerTest {
         pose.requiredLandmarks().forEach(n -> map.put(n, new Landmark(.5, .5, .4)));
         assertInstanceOf(AnalysisResult.Unreliable.class, new PoseAnalyzer().analyze(pose, new LandmarkFrame(Instant.now(), map)));
     }
-}
 
+    @Test void poseWithoutRulesIsExplicitlyInstructionOnly() {
+        var source = new DemoLandmarkSource();
+        source.selectPose("mountain");
+        var result = new PoseAnalyzer().analyze(new PoseCatalog().require("mountain"), source.targetFrame());
+        var instruction = assertInstanceOf(AnalysisResult.InstructionOnly.class, result);
+        assertTrue(instruction.guidance().contains("not available"));
+    }
+
+    @Test void everyAuthoredReferenceIsTruthfulAboutWhatWasMeasured() {
+        var source = new DemoLandmarkSource();
+        var analyzer = new PoseAnalyzer();
+        for (var pose : new PoseCatalog().all()) {
+            source.selectPose(pose.id());
+            var result = analyzer.analyze(pose, source.targetFrame());
+            if (pose.alignmentRules().isEmpty()) {
+                assertInstanceOf(AnalysisResult.InstructionOnly.class, result, pose.id());
+            } else {
+                var reliable = assertInstanceOf(AnalysisResult.Reliable.class, result, pose.id());
+                assertTrue(reliable.suggestions().isEmpty(), () -> pose.id() + " contradicts its reference: " + reliable.suggestions());
+                assertEquals("Steady — keep breathing", reliable.status(), pose.id());
+            }
+        }
+    }
+
+    @Test void deliberateChairKneeDeviationProducesTheExpectedCue() {
+        var source = new DemoLandmarkSource();
+        var pose = new PoseCatalog().require("chair");
+        source.selectPose(pose.id());
+        var reference = source.targetFrame();
+        var changed = new EnumMap<>(reference.landmarks());
+        var knee = changed.get(LandmarkName.LEFT_KNEE);
+        changed.put(LandmarkName.LEFT_KNEE, new Landmark(knee.x() - .18, knee.y() + .02, knee.confidence()));
+
+        var result = assertInstanceOf(AnalysisResult.Reliable.class,
+                new PoseAnalyzer().analyze(pose, new LandmarkFrame(Instant.now(), changed)));
+
+        assertEquals("Almost aligned", result.status());
+        assertEquals(List.of("Try a smaller knee bend and keep your knees tracking toward your toes."), result.suggestions());
+    }
+}

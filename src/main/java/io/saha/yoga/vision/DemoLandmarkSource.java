@@ -91,7 +91,7 @@ public final class DemoLandmarkSource implements LandmarkSource {
     }
     @Override public boolean isTransitioning() { return target != null && (System.nanoTime()-transitionStarted) < 5_000_000_000L; }
     @Override public FaceDirection faceDirection() { return facing; }
-    LandmarkFrame targetFrame() { return new LandmarkFrame(Instant.now(), target == null ? build(poseId) : target); }
+    public LandmarkFrame targetFrame() { return new LandmarkFrame(Instant.now(), target == null ? build(poseId) : target); }
     private FaceDirection facingFor(String id) { return switch(id) {
         case "warrior_two" -> FaceDirection.LEFT;
         case "cat_cow", "bird_dog" -> FaceDirection.DOWN;

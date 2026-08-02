@@ -32,16 +32,20 @@ dependencies {
 
 application {
     mainClass = "io.saha.yoga.SahaApp"
-    applicationDefaultJvmArgs = listOf("--enable-native-access=javafx.graphics")
+    applicationDefaultJvmArgs = listOf("--enable-preview", "--enable-native-access=javafx.graphics")
 }
 
-tasks.test { useJUnitPlatform() }
+tasks.withType<JavaCompile>().configureEach { options.compilerArgs.add("--enable-preview") }
+tasks.test {
+    useJUnitPlatform()
+    jvmArgs("--enable-preview")
+}
 
 tasks.register<JavaExec>("poseGallerySnapshot") {
     group = "verification"
-    description = "Renders the grounded teaching pose gallery to build/review/pose-gallery.png"
+    description = "Renders licensed teaching-asset candidates to build/review/pose-gallery.png"
     classpath = sourceSets.main.get().runtimeClasspath
     mainClass = "io.saha.yoga.illustration.PoseGallerySnapshotLauncher"
     args(layout.buildDirectory.file("review/pose-gallery.png").get().asFile.absolutePath)
-    jvmArgs("--enable-native-access=ALL-UNNAMED")
+    jvmArgs("--enable-preview", "--enable-native-access=ALL-UNNAMED")
 }

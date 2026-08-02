@@ -53,3 +53,4 @@
 .observation-title { -fx-font-size: 10px; -fx-font-weight: 700; -fx-text-fill: #b7c8c5; }
 .pose-draft-card { -fx-background-color: #f5efe1; -fx-background-radius: 16; -fx-padding: 16; -fx-border-color: #d6c79e; -fx-border-radius: 16; -fx-border-width: 2; }
 .pose-draft-canvas { -fx-background-color: #fffaf0; -fx-background-radius: 10; -fx-border-color: #dfd1ad; -fx-border-radius: 10; }
+.licensed-art-canvas { -fx-background-color: #ffffff; -fx-background-radius: 10; -fx-border-color: #dfd1ad; -fx-border-radius: 10; -fx-padding: 10; }

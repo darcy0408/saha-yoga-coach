@@ -10,6 +10,10 @@ public final class PoseAnalyzer {
         if (confidence < RELIABILITY_THRESHOLD) {
             return new AnalysisResult.Unreliable("Step back so your full body is visible, and check the lighting.", confidence);
         }
+        if (pose.alignmentRules().isEmpty()) {
+            return new AnalysisResult.InstructionOnly(
+                    "Follow the written setup. Camera alignment checks are not available for this pose yet.", confidence);
+        }
         var misses = pose.alignmentRules().stream().map(rule -> {
             var points = frame.landmarks();
             var angle = Geometry.angleDegrees(points.get(rule.first()), points.get(rule.vertex()), points.get(rule.third()));
@@ -21,4 +25,3 @@ public final class PoseAnalyzer {
     }
     private record Evaluation(AlignmentRule rule, double angle) {}
 }
-
