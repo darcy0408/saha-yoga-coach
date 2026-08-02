@@ -16,6 +16,8 @@ import javafx.scene.Scene;
 import javafx.scene.control.*;
 import javafx.scene.image.Image;
 import javafx.scene.image.ImageView;
+import javafx.scene.image.PixelFormat;
+import javafx.scene.image.WritableImage;
 import javafx.scene.layout.*;
 import javafx.scene.paint.Color;
 import javafx.scene.shape.Circle;
@@ -29,6 +31,8 @@ import java.io.IOException;
 import java.nio.file.Path;
 import java.time.Instant;
 import java.util.*;
+import java.util.concurrent.atomic.AtomicBoolean;
+import java.util.concurrent.atomic.AtomicReference;
 
 public final class SahaApp extends Application {
     private final PoseCatalog catalog = new PoseCatalog();
@@ -50,6 +54,11 @@ public final class SahaApp extends Application {
     private VBox teachingView;
     private HBox practicePath;
     private ScrollPane practicePathScroll;
+    private CameraCapture cameraCapture;
+    private ImageView cameraPreview;
+    private Label cameraStatus;
+    private final AtomicReference<CameraFrame> pendingCameraFrame = new AtomicReference<>();
+    private final AtomicBoolean cameraRenderPending = new AtomicBoolean();
 
     @Override public void start(Stage primaryStage) {
         stage = primaryStage; stage.setTitle("Saha · personal yoga coach");
@@ -92,16 +101,58 @@ public final class SahaApp extends Application {
     private VBox field(String name, Control control) { var label = new Label(name); label.getStyleClass().add("field-label"); control.setMaxWidth(Double.MAX_VALUE); return new VBox(6, label, control); }
 
     private void showCalibration() {
+        stopCameraPreview();
         var title = new Label("Set up your space"); title.getStyleClass().add("title");
         var guide = new VBox(12, check("Place the camera around hip height."), check("Step back until your whole body fits."), check("Face a light source; avoid a bright window behind you."), check("Clear enough floor space to step in every direction.")); guide.getStyleClass().add("card");
         var preview = createBodyView(); bodyView = preview; preview.setPrefSize(480, 390); preview.getStyleClass().add("camera");
-        var badge = new Label("DEMO MODE · no camera required"); badge.getStyleClass().add("badge");
-        var note = new Label("Camera integration is safely unavailable until a compatible ONNX pose model is installed. The demonstration uses prerecorded-style synthetic landmarks and exercises the same analysis pipeline."); note.setWrapText(true);
+        cameraPreview = new ImageView(); cameraPreview.setPreserveRatio(true); cameraPreview.setFitWidth(480); cameraPreview.setFitHeight(390); cameraPreview.setVisible(false);
+        var previewStack = new StackPane(preview, cameraPreview); previewStack.setPrefSize(480, 390); previewStack.getStyleClass().add("camera");
+        var badge = new Label("DEMO COACHING · local camera preview optional"); badge.getStyleClass().add("badge");
+        cameraStatus = new Label("No camera is opened unless you choose the preview below."); cameraStatus.setWrapText(true);
+        var note = new Label("Camera preview stays on this device and is never recorded. Until a verified ONNX pose model is installed, coaching continues with synthetic demonstration landmarks and does not claim to analyze the preview."); note.setWrapText(true);
+        var tryCamera = new Button("Try local camera preview"); tryCamera.setOnAction(e -> startCameraPreview(0));
         var begin = new Button("Start Steady Start"); begin.getStyleClass().add("primary"); begin.setOnAction(e -> beginRoutine());
         var review = new Button("Review teaching pose drafts"); review.setOnAction(e -> showPoseGallery());
-        var left = new VBox(18, title, guide, badge, note, new HBox(10, begin, review)); left.setMaxWidth(520);
-        var page = new BorderPane(preview, null, null, null, left); page.setPadding(new Insets(50)); BorderPane.setMargin(left, new Insets(0, 35, 0, 0)); page.getStyleClass().add("page");
+        var left = new VBox(18, title, guide, badge, cameraStatus, note, tryCamera, new HBox(10, begin, review)); left.setMaxWidth(520);
+        var page = new BorderPane(previewStack, null, null, null, left); page.setPadding(new Insets(50)); BorderPane.setMargin(left, new Insets(0, 35, 0, 0)); page.getStyleClass().add("page");
         drawFrame(landmarks.nextFrame()); setPage(page);
+    }
+
+    private void startCameraPreview(int deviceIndex) {
+        stopCameraPreview();
+        cameraStatus.setText("Opening camera " + deviceIndex + " locally...");
+        cameraCapture = new OpenCvCameraCapture(deviceIndex);
+        cameraCapture.start(this::showCameraFrame, message -> Platform.runLater(() -> {
+            cameraPreview.setVisible(false);
+            bodyView.setVisible(true);
+            cameraStatus.setText(message + " Demo mode remains available.");
+        }));
+    }
+
+    private void showCameraFrame(CameraFrame frame) {
+        pendingCameraFrame.set(frame);
+        if (!cameraRenderPending.compareAndSet(false, true)) return;
+        Platform.runLater(() -> {
+            var latest = pendingCameraFrame.getAndSet(null);
+            if (cameraPreview != null && latest != null) {
+                var image = new WritableImage(latest.width(), latest.height());
+                image.getPixelWriter().setPixels(0, 0, latest.width(), latest.height(),
+                        PixelFormat.getByteBgraInstance(), latest.bgra(), 0, latest.width() * 4);
+                cameraPreview.setImage(image);
+                cameraPreview.setVisible(true);
+                bodyView.setVisible(false);
+                cameraStatus.setText("Local preview active. Frames are transient and are not saved. Alignment analysis is still demo-only.");
+            }
+            cameraRenderPending.set(false);
+            var next = pendingCameraFrame.get();
+            if (next != null) showCameraFrame(next);
+        });
+    }
+
+    private void stopCameraPreview() {
+        if (cameraCapture != null) cameraCapture.close();
+        cameraCapture = null;
+        pendingCameraFrame.set(null);
     }
 
     private void showPoseGallery() {
@@ -142,6 +193,7 @@ public final class SahaApp extends Application {
     private HBox check(String value) { var dot = new Label("✓"); dot.getStyleClass().add("check"); var text = new Label(value); text.setWrapText(true); return new HBox(10, dot, text); }
 
     private void beginRoutine() {
+        stopCameraPreview();
         try { var recommendation = new PersonalizationEngine().recommend(store.load()); routine = generator.beginner(recommendation.durationAdjustments(), recommendation.explanations()); }
         catch (IOException e) { routine = generator.beginner(Map.of(), List.of("Session history could not be read; using the gentle baseline.")); }
         itemIndex = 0; remaining = routine.items().getFirst().durationSeconds(); showCoach();
@@ -355,6 +407,6 @@ public final class SahaApp extends Application {
         bodyView.getChildren().addAll(eye,nose,mouth);
     }
 
-    @Override public void stop() { if (clock != null) clock.stop(); landmarks.close(); }
+    @Override public void stop() { if (clock != null) clock.stop(); stopCameraPreview(); landmarks.close(); }
     public static void main(String[] args) { launch(args); }
 }

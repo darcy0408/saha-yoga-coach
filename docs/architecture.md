@@ -2,7 +2,7 @@
 
 ## Components
 
-Saha uses ports between capture, landmark inference, analysis, coaching, routines, and storage. `LandmarkSource` is the only input the analysis pipeline needs. `DemoLandmarkSource` currently supplies deterministic normalized coordinates. A live adapter will own OpenCV frame capture, resize/input normalization, ONNX Runtime inference, and MoveNet output decoding without leaking frames beyond that boundary.
+Saha uses ports between capture, landmark inference, analysis, coaching, routines, and storage. `LandmarkSource` is the only input the analysis pipeline needs. `DemoLandmarkSource` currently supplies deterministic normalized coordinates. `OpenCvCameraCapture` provides an opt-in, non-recording calibration preview on a background virtual thread; the JavaFX side coalesces frames so capture cannot flood its event queue. A future live landmark adapter will add resize/input normalization, ONNX Runtime inference, and MoveNet output decoding without leaking frames beyond that boundary.
 
 `PoseAnalyzer` first finds the minimum confidence of every required landmark. Below 0.70 it returns the sealed `Unreliable` result, which contains framing guidance but cannot contain corrective suggestions. Reliable frames evaluate 2D joint angles against pose-specific ranges. Rules are prioritized and capped at two. Timing consumes only reliable frames.
 
@@ -32,15 +32,14 @@ Gradle targets Java 26. Records express immutable domain values; sealed results 
 | Gradle | 9.4.0 | Apache-2.0 | Java 26-capable wrapper |
 | OpenJFX | 26 | GPLv2 + Classpath Exception | UI |
 | ONNX Runtime | 1.22.0 | MIT | Phase 2 local inference runtime |
-| OpenPnP OpenCV | 4.9.0-0 | BSD-3-Clause | Phase 2 camera/native binding |
+| OpenPnP OpenCV | 4.9.0-0 | BSD-3-Clause | Local calibration preview; inference not connected |
 | Jackson | 2.19.2 | Apache-2.0 | Derived-metric JSON |
 | JUnit | 5.13.4 | EPL-2.0 | Tests |
 
 ## Compatibility decision
 
-The authoring host exposes Temurin 21.0.10 and no Gradle, while the requested runtime is Java 26. Gradle 9.4.0 is selected because its official release notes explicitly add Java 26 support. Native OpenCV and an exact model artifact cannot be validated on this host, so live vision is isolated and disabled rather than represented as working. Demo mode keeps all non-capture behavior functional.
+The application builds and tests with Temurin 26.0.1 through the pinned Gradle 9.4.0 wrapper. Native OpenCV camera behavior and an exact model artifact have not yet passed their separate acceptance gates, so live pose inference remains isolated and disabled rather than represented as working. Demo mode keeps all non-capture behavior functional.
 
 ## Logging
 
 Application logs must contain lifecycle/error identifiers and aggregate timing only. Never log frames, images, coordinates, profile free text, or detailed body measurements.
-

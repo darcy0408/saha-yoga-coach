@@ -4,13 +4,13 @@
 
 Saha is educational fitness software, not medical care. It observes anonymous body landmarks locally, never identity or appearance, and offers cautious, confidence-aware yoga cues. The contest-ready path must work without a camera by replaying synthetic landmark fixtures.
 
-## Environment inventory (31 July 2026)
+## Environment inventory (updated 1 August 2026)
 
-- Workspace: empty Windows repository at `C:\dev\yoga`; no prior user files or Git metadata.
-- Installed JVM: Eclipse Temurin 21.0.10; Java 26 is not installed.
-- Build tooling: no system Gradle and no wrapper initially present.
+- Workspace: Windows repository at `C:\dev\yoga`, connected to GitHub.
+- Installed JVM: Eclipse Temurin 26.0.1.
+- Build tooling: Gradle 9.4.0 wrapper checked into the repository.
 - Hardware probing through WMI was denied, so no CPU/GPU assumptions are made.
-- Consequence: target Java 26 through Gradle toolchains, keep CPU inference optional, and document that final Java 26 execution needs verification on a machine with JDK 26.
+- Consequence: Java 26 builds and tests can be verified locally; camera and native inference still require explicit device/model validation.
 
 ## Architecture
 
@@ -24,7 +24,7 @@ Saha is educational fitness software, not medical care. It observes anonymous bo
 | Personalization | transparent adjustments and explanations | Pure rules over session summaries |
 | Storage | local JSON session metrics | Never stores frames or landmark histories |
 
-The UI uses virtual threads for blocking device/model work and JavaFX's application thread for rendering. Records model immutable domain events and sealed interfaces constrain analysis results. Pattern matching keeps result handling exhaustive and readable. The Gradle Java 26 toolchain makes the requested platform explicit.
+The UI uses JavaFX's application thread for rendering. Camera and model work must run off that thread when implemented. Records model immutable domain events and sealed interfaces constrain analysis results. Pattern matching keeps result handling exhaustive and readable. Java 26 preview `LazyConstant` initializes the immutable pose catalog on first use. The Gradle Java 26 toolchain makes the requested platform explicit.
 
 ## Dependency decisions
 
@@ -52,7 +52,7 @@ Pose illustration accuracy and transition work follows the dedicated [pose accur
 
 ### Phase 2 — expanded coaching
 
-Live OpenCV capture and MoveNet ONNX preprocessing/postprocessing, several routine modes, transition stability, local speech, accessibility review, and richer charts.
+MoveNet ONNX preprocessing/postprocessing connected to the implemented local OpenCV preview, several routine modes, transition stability, local speech, accessibility review, and richer charts.
 
 ### Phase 3 — optional enhancements
 
@@ -60,7 +60,7 @@ Only after stability: second-camera fusion, voice control, wearable input, progr
 
 ## Risks and mitigations
 
-- **No local JDK 26:** compile verification is blocked locally; use Gradle toolchain auto-provisioning or install Temurin 26, then run clean CI.
+- **Java 26 preview API:** `LazyConstant` requires `--enable-preview`; Gradle applies it consistently to compilation, tests, and execution.
 - **Pose model licensing/shape mismatch:** do not bundle an unverified model; checksum and document an approved MoveNet ONNX export before enabling inference.
 - **Native camera variance:** isolate OpenCV, enumerate devices, catch load/open failures, preserve demo and instruction-only modes.
 - **Unsafe or noisy coaching:** require aggregate landmark confidence of at least 0.70, use ranges, suppress feedback on occlusion, and show at most two cues.

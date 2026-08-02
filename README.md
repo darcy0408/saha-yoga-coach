@@ -15,6 +15,7 @@ Home yoga videos cannot notice when someone leaves the frame, needs a gentler op
 - Polished JavaFX onboarding, calibration, coaching, and progress screens.
 - A 19:10 beginner routine with warm-up, main sequence, cooldown, and 12 poses.
 - Structured instructions, modifications, landmark requirements, angle ranges, and general cautions.
+- Opt-in, local OpenCV camera preview during calibration; frames are transient and never analyzed or stored in this build.
 - Near-real-time synthetic landmark demonstration through the production analysis boundary.
 - Joint-angle calculations and a 0.70 minimum confidence threshold.
 - Bilateral rule strategies support either lead side instead of assuming the left leg always leads.
@@ -24,7 +25,7 @@ Home yoga videos cannot notice when someone leaves the frame, needs a gentler op
 - Derived-only JSON session history, explainable rule-based personalization, and full deletion.
 - Automated geometry, confidence, routine, personalization, and persistence tests.
 
-Live OpenCV capture and ONNX inference are intentionally disabled until the documented MoveNet model artifact is verified. The UI never crashes or goes blank because demo mode remains available.
+Live OpenCV preview is available from camera setup. ONNX inference is intentionally disabled until the documented MoveNet model artifact is verified, so the application clearly labels coaching as synthetic demo analysis. The UI falls back to demo mode instead of crashing or going blank when camera access fails.
 
 ## Java 26
 
@@ -78,12 +79,12 @@ Normal operation saves no video, images, face data, landmark coordinates, identi
 
 ## Known limitations
 
-- Live camera capture and ONNX inference are behind a disabled integration boundary pending model validation.
+- Live camera preview is not yet connected to ONNX landmark inference, so coaching remains demo-only.
 - Demo landmarks are synthetic and prove workflow/analysis behavior, not model accuracy.
 - Alignment rules cover a reliable subset; some poses provide instruction and confidence checks without geometric correction.
 - Single-view 2D angles cannot resolve depth or guarantee alignment or safety.
 - Text-to-speech, multiple routine modes, and accessibility audit remain Phase 2.
-- Local JDK 26/build verification was unavailable at repository creation.
+- Live camera behavior still needs a device-specific Windows smoke test even though the Java 26 build is verified.
 
 ## Three-minute demonstration
 

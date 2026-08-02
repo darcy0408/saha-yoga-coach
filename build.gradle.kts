@@ -32,7 +32,7 @@ dependencies {
 
 application {
     mainClass = "io.saha.yoga.SahaApp"
-    applicationDefaultJvmArgs = listOf("--enable-preview", "--enable-native-access=javafx.graphics")
+    applicationDefaultJvmArgs = listOf("--enable-preview", "--enable-native-access=javafx.graphics,ALL-UNNAMED")
 }
 
 tasks.withType<JavaCompile>().configureEach { options.compilerArgs.add("--enable-preview") }
