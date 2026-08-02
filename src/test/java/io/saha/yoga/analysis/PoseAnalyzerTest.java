@@ -59,4 +59,41 @@ class PoseAnalyzerTest {
         assertEquals("Almost aligned", result.status());
         assertEquals(List.of("Try a smaller knee bend and keep your knees tracking toward your toes."), result.suggestions());
     }
+
+    @Test void measuredReferencesRemainValidWhenLeftAndRightAreSwapped() {
+        var source = new DemoLandmarkSource();
+        var analyzer = new PoseAnalyzer();
+        for (var pose : new PoseCatalog().all().stream().filter(value -> !value.alignmentRules().isEmpty()).toList()) {
+            source.selectPose(pose.id());
+            var original = source.targetFrame().landmarks();
+            var mirrored = new EnumMap<LandmarkName, Landmark>(LandmarkName.class);
+            original.forEach((name, point) -> mirrored.put(swap(name), point));
+
+            var result = assertInstanceOf(AnalysisResult.Reliable.class,
+                    analyzer.analyze(pose, new LandmarkFrame(Instant.now(), mirrored)), pose.id());
+            assertTrue(result.suggestions().isEmpty(), () -> pose.id() + " failed on the opposite lead side");
+        }
+    }
+
+    private LandmarkName swap(LandmarkName name) {
+        return switch (name) {
+            case LEFT_SHOULDER -> LandmarkName.RIGHT_SHOULDER;
+            case RIGHT_SHOULDER -> LandmarkName.LEFT_SHOULDER;
+            case LEFT_ELBOW -> LandmarkName.RIGHT_ELBOW;
+            case RIGHT_ELBOW -> LandmarkName.LEFT_ELBOW;
+            case LEFT_WRIST -> LandmarkName.RIGHT_WRIST;
+            case RIGHT_WRIST -> LandmarkName.LEFT_WRIST;
+            case LEFT_HAND -> LandmarkName.RIGHT_HAND;
+            case RIGHT_HAND -> LandmarkName.LEFT_HAND;
+            case LEFT_HIP -> LandmarkName.RIGHT_HIP;
+            case RIGHT_HIP -> LandmarkName.LEFT_HIP;
+            case LEFT_KNEE -> LandmarkName.RIGHT_KNEE;
+            case RIGHT_KNEE -> LandmarkName.LEFT_KNEE;
+            case LEFT_ANKLE -> LandmarkName.RIGHT_ANKLE;
+            case RIGHT_ANKLE -> LandmarkName.LEFT_ANKLE;
+            case LEFT_TOE -> LandmarkName.RIGHT_TOE;
+            case RIGHT_TOE -> LandmarkName.LEFT_TOE;
+            case NOSE -> LandmarkName.NOSE;
+        };
+    }
 }

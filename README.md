@@ -17,6 +17,8 @@ Home yoga videos cannot notice when someone leaves the frame, needs a gentler op
 - Structured instructions, modifications, landmark requirements, angle ranges, and general cautions.
 - Near-real-time synthetic landmark demonstration through the production analysis boundary.
 - Joint-angle calculations and a 0.70 minimum confidence threshold.
+- Bilateral rule strategies support either lead side instead of assuming the left leg always leads.
+- Poses without implemented measurements explicitly say "instruction only" rather than implying alignment was checked.
 - At most two supportive, observable cues at once; timer pauses when confidence is low.
 - Pause, repeat, skip, easier-option, and always-visible immediate-stop controls.
 - Derived-only JSON session history, explainable rule-based personalization, and full deletion.
