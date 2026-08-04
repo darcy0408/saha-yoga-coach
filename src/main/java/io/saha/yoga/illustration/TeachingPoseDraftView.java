@@ -32,7 +32,7 @@ public final class TeachingPoseDraftView extends Pane {
 
         var ground = line(width*.06, floor, width*.94, floor, 3, Color.web("#8c6b32"));
         getChildren().add(ground);
-        var floorText = new Text(width*.07, floor-7, "support surface"); floorText.setFill(Color.web("#725b25"));
+        var floorText = new Text(width*.07, floor-7, "floor"); floorText.setFill(Color.web("#725b25"));
         getChildren().add(floorText);
 
         leg(REAR_KNEE, REAR_ANKLE, REAR_HEEL, REAR_TOE, width, height, REAR);

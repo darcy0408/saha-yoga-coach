@@ -14,8 +14,9 @@ Home yoga videos cannot notice when someone leaves the frame, needs a gentler op
 
 - Polished JavaFX onboarding, calibration, coaching, and progress screens.
 - A 19:10 beginner routine with warm-up, main sequence, cooldown, and 12 poses.
+- A 1–5 intensity control that transparently adjusts active hold times without introducing advanced poses.
 - Structured instructions, modifications, landmark requirements, angle ranges, and general cautions.
-- Opt-in, local OpenCV camera preview during calibration; frames are transient and never analyzed or stored in this build.
+- Opt-in, local OpenCV camera preview during calibration and practice; frames are transient and never analyzed or stored in this build.
 - Near-real-time synthetic landmark demonstration through the production analysis boundary.
 - Joint-angle calculations and a 0.70 minimum confidence threshold.
 - Bilateral rule strategies support either lead side instead of assuming the left leg always leads.

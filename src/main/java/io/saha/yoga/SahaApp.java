@@ -47,6 +47,7 @@ public final class SahaApp extends Application {
     private Stage stage;
     private Routine routine;
     private int itemIndex, remaining;
+    private int preferredIntensity = 2;
     private int clockTicks;
     private boolean paused;
     private Timeline clock;
@@ -62,6 +63,7 @@ public final class SahaApp extends Application {
     private PauseTransition cameraOpenTimeout;
     private final AtomicReference<CameraFrame> pendingCameraFrame = new AtomicReference<>();
     private final AtomicBoolean cameraRenderPending = new AtomicBoolean();
+    private volatile boolean livePreviewActive;
 
     @Override public void start(Stage primaryStage) {
         stage = primaryStage; stage.setTitle("Saha · personal yoga coach");
@@ -91,11 +93,11 @@ public final class SahaApp extends Application {
         var experience = new ComboBox<String>(); experience.getItems().addAll("New to yoga", "Some experience", "Regular practice"); experience.getSelectionModel().selectFirst();
         var goal = new ComboBox<String>(); goal.getItems().addAll("Gentle movement", "Flexibility", "Balance", "Strength", "Recovery"); goal.getSelectionModel().selectFirst();
         var mobility = new TextField(); mobility.setPromptText("Optional movement limits or areas to avoid");
-        var intensity = new Slider(1, 3, 1); intensity.setShowTickLabels(true); intensity.setMajorTickUnit(1); intensity.setSnapToTicks(true);
+        var intensity = new Slider(1, 5, 2); intensity.setShowTickLabels(true); intensity.setShowTickMarks(true); intensity.setMajorTickUnit(1); intensity.setMinorTickCount(0); intensity.setBlockIncrement(1); intensity.setSnapToTicks(true);
         var consent = new CheckBox("I understand Saha is educational fitness software, not medical care."); consent.setWrapText(true); consent.setMinHeight(Region.USE_PREF_SIZE);
         var safety = new Label("Stop immediately for pain, dizziness, numbness, weakness, or unusual discomfort. For pregnancy, recent surgery, chronic pain, or significant mobility limits, seek appropriate professional guidance."); safety.setWrapText(true); safety.setMinHeight(Region.USE_PREF_SIZE); safety.getStyleClass().add("notice");
-        var start = new Button("Continue to camera setup"); start.getStyleClass().add("primary"); start.disableProperty().bind(consent.selectedProperty().not()); start.setOnAction(e -> showCalibration());
-        var form = new VBox(14, field("Experience", experience), field("Focus", goal), field("Anything we should avoid?", mobility), field("Preferred intensity · gentle to active", intensity), consent, safety, start);
+        var start = new Button("Continue to camera setup"); start.getStyleClass().add("primary"); start.disableProperty().bind(consent.selectedProperty().not()); start.setOnAction(e -> { preferredIntensity = (int) Math.round(intensity.getValue()); showCalibration(); });
+        var form = new VBox(14, field("Experience", experience), field("Focus", goal), field("Anything we should avoid?", mobility), field("Preferred intensity · 1 gentle to 5 active", intensity), consent, safety, start);
         form.getStyleClass().add("card"); form.setMaxWidth(700);
         var page = new VBox(24, new Label("SAHA  /  PRIVATE BY DEFAULT"), title, intro, form); page.setAlignment(Pos.CENTER_LEFT); page.setPadding(new Insets(55, 100, 55, 100)); page.getStyleClass().add("page");
         setPage(scrollable(page));
@@ -115,7 +117,7 @@ public final class SahaApp extends Application {
         var note = new Label("Camera preview stays on this device and is never recorded. Until a verified ONNX pose model is installed, coaching continues with synthetic demonstration landmarks and does not claim to analyze the preview."); note.setWrapText(true);
         cameraButton = new Button("Try local camera preview"); cameraButton.setOnAction(e -> startCameraPreview(0));
         var begin = new Button("Start Steady Start"); begin.getStyleClass().add("primary"); begin.setOnAction(e -> beginRoutine());
-        var review = new Button("Review teaching pose drafts"); review.setOnAction(e -> showPoseGallery());
+        var review = new Button("Review licensed pose candidates"); review.setOnAction(e -> showPoseGallery());
         var left = new VBox(18, title, guide, badge, cameraStatus, note, cameraButton, new HBox(10, begin, review)); left.setMaxWidth(520);
         var page = new BorderPane(previewStack, null, null, null, left); page.setPadding(new Insets(50)); BorderPane.setMargin(left, new Insets(0, 35, 0, 0)); page.getStyleClass().add("page");
         drawFrame(landmarks.nextFrame()); setPage(page);
@@ -160,6 +162,7 @@ public final class SahaApp extends Application {
                 cameraPreview.setImage(image);
                 cameraPreview.setVisible(true);
                 bodyView.setVisible(false);
+                livePreviewActive = true;
                 cameraStatus.setText("Local preview active. Frames are transient and are not saved. Alignment analysis is still demo-only.");
                 cameraButton.setDisable(false);
                 cameraButton.setText("Restart camera preview");
@@ -173,6 +176,7 @@ public final class SahaApp extends Application {
     private void stopCameraPreview() {
         if (cameraCapture != null) cameraCapture.close();
         cameraCapture = null;
+        livePreviewActive = false;
         if (cameraOpenTimeout != null) cameraOpenTimeout.stop();
         cameraOpenTimeout = null;
         pendingCameraFrame.set(null);
@@ -184,11 +188,15 @@ public final class SahaApp extends Application {
         var candidatesTitle = new Label("LICENSED REFERENCE CANDIDATES"); candidatesTitle.getStyleClass().add("badge");
         var candidates = new TilePane(); candidates.setHgap(18); candidates.setVgap(18); candidates.setPrefColumns(2); candidates.setPrefTileWidth(370);
         teachingAssets.reviewCandidates().stream().map(this::teachingAssetCard).forEach(candidates.getChildren()::add);
-        var draftsTitle = new Label("ORIGINAL DIAGNOSTIC DRAFTS"); draftsTitle.getStyleClass().add("badge");
-        var gallery = new TilePane(); gallery.setHgap(18); gallery.setVgap(18); gallery.setPrefColumns(3); gallery.setPrefTileWidth(370); gallery.setPrefTileHeight(430);
-        for (var draft : teachingDrafts.all()) gallery.getChildren().add(poseDraftCard(draft));
         var back = new Button("Back to camera setup"); back.getStyleClass().add("primary"); back.setOnAction(e -> showCalibration());
-        var page = new VBox(18, title, intro, candidatesTitle, candidates, draftsTitle, gallery, back); page.setPadding(new Insets(35)); page.getStyleClass().add("page");
+        var page = new VBox(18, title, intro, candidatesTitle, candidates);
+        if (getParameters().getRaw().contains("--pose-gallery")) {
+            var draftsTitle = new Label("DEVELOPER DIAGNOSTIC DRAFTS · REJECTED FOR COACHING"); draftsTitle.getStyleClass().add("badge");
+            var gallery = new TilePane(); gallery.setHgap(18); gallery.setVgap(18); gallery.setPrefColumns(3); gallery.setPrefTileWidth(370); gallery.setPrefTileHeight(430);
+            for (var draft : teachingDrafts.all()) gallery.getChildren().add(poseDraftCard(draft));
+            page.getChildren().addAll(draftsTitle, gallery);
+        }
+        page.getChildren().add(back); page.setPadding(new Insets(35)); page.getStyleClass().add("page");
         setPage(scrollable(page));
     }
 
@@ -208,7 +216,7 @@ public final class SahaApp extends Application {
         var name = new Label(draft.displayName()); name.getStyleClass().add("teaching-pose-name");
         var view = new Label(draft.view() + " · gaze: " + draft.gaze()); view.getStyleClass().add("teaching-review");
         var art = new TeachingPoseDraftView(draft); art.getStyleClass().add("pose-draft-canvas");
-        var contacts = new Label("Grounding check: both required feet meet the support surface."); contacts.setWrapText(true); contacts.getStyleClass().add("support-label");
+        var contacts = new Label("Grounding check: both feet that should be down are on the floor."); contacts.setWrapText(true); contacts.getStyleClass().add("support-label");
         var card = new VBox(7, name, view, art, contacts); card.getStyleClass().add("pose-draft-card");
         return card;
     }
@@ -216,9 +224,8 @@ public final class SahaApp extends Application {
     private HBox check(String value) { var dot = new Label("✓"); dot.getStyleClass().add("check"); var text = new Label(value); text.setWrapText(true); return new HBox(10, dot, text); }
 
     private void beginRoutine() {
-        stopCameraPreview();
-        try { var recommendation = new PersonalizationEngine().recommend(store.load()); routine = generator.beginner(recommendation.durationAdjustments(), recommendation.explanations()); }
-        catch (IOException e) { routine = generator.beginner(Map.of(), List.of("Session history could not be read; using the gentle baseline.")); }
+        try { var recommendation = new PersonalizationEngine().recommend(store.load()); routine = generator.beginner(recommendation.durationAdjustments(), recommendation.explanations(), preferredIntensity); }
+        catch (IOException e) { routine = generator.beginner(Map.of(), List.of("Session history could not be read; using the gentle baseline."), preferredIntensity); }
         itemIndex = 0; remaining = routine.items().getFirst().durationSeconds(); showCoach();
     }
 
@@ -226,7 +233,10 @@ public final class SahaApp extends Application {
         poseLabel = new Label(); poseLabel.setWrapText(true); poseLabel.setMinHeight(Region.USE_PREF_SIZE); poseLabel.getStyleClass().add("hero-small"); phaseLabel = new Label(); phaseLabel.getStyleClass().add("badge");
         statusLabel = wrapLabel(); statusLabel.getStyleClass().add("status"); suggestionLabel = wrapLabel(); optionalLabel = wrapLabel(); confidenceLabel = wrapLabel(); timerLabel = new Label(); timerLabel.getStyleClass().add("timer");
         teachingView = new VBox(10); teachingView.setPrefSize(560, 270); teachingView.getStyleClass().add("teaching-view");
-        bodyView = createBodyView(); bodyView.setPrefSize(560, 205); bodyView.getStyleClass().add("camera-observation");
+        bodyView = createBodyView(); bodyView.setPrefSize(560, 205);
+        cameraPreview = new ImageView(); cameraPreview.setPreserveRatio(true); cameraPreview.setFitWidth(560); cameraPreview.setFitHeight(205); cameraPreview.setVisible(livePreviewActive);
+        var observationView = new StackPane(bodyView, cameraPreview); observationView.setPrefSize(560, 205); observationView.getStyleClass().add("camera-observation");
+        bodyView.setVisible(!livePreviewActive);
         var stop = actionButton("Stop now"); stop.getStyleClass().add("danger"); stop.setOnAction(e -> finish(false));
         var pause = actionButton("Pause"); pause.setOnAction(e -> { paused = !paused; pause.setText(paused ? "Resume" : "Pause"); });
         var repeat = actionButton("Repeat cue"); repeat.setOnAction(e -> suggestionLabel.requestFocus());
@@ -241,8 +251,10 @@ public final class SahaApp extends Application {
         controls.add(stop, 0, 2, 2, 1);
         var reasonText = wrapLabel(); reasonText.setMinHeight(Region.USE_PREF_SIZE); reasonText.setText(String.join(" ", routine.explanations()));
         var feedback = new VBox(10, phaseLabel, poseLabel, timerLabel, statusLabel, suggestionLabel, optionalLabel, confidenceLabel, new Separator(), new Label("Why this routine changed"), reasonText, controls); feedback.getStyleClass().add("card"); feedback.setPrefWidth(470); feedback.setMaxWidth(540);
-        var observationTitle = new Label("CAMERA OBSERVATION · SYNTHETIC DEMO · NOT AN EXAMPLE POSE"); observationTitle.getStyleClass().add("observation-title");
-        var observation = new VBox(5, observationTitle, bodyView); VBox.setVgrow(bodyView, Priority.ALWAYS);
+        var observationTitle = new Label(livePreviewActive
+                ? "LIVE CAMERA PREVIEW · ALIGNMENT NOT YET ANALYZED"
+                : "SYNTHETIC DEMO LANDMARKS · NOT AN EXAMPLE POSE"); observationTitle.getStyleClass().add("observation-title");
+        var observation = new VBox(5, observationTitle, observationView); VBox.setVgrow(observationView, Priority.ALWAYS);
         var visualColumn = new VBox(12, teachingView, observation); VBox.setVgrow(teachingView, Priority.ALWAYS); VBox.setVgrow(observation, Priority.ALWAYS);
         var coach = new BorderPane(visualColumn, null, feedback, null, null); BorderPane.setMargin(feedback, new Insets(0, 0, 0, 25));
         practicePath = new HBox(8); practicePath.setAlignment(Pos.CENTER_LEFT);
@@ -259,6 +271,15 @@ public final class SahaApp extends Application {
     private Button actionButton(String text) { var button = new Button(text); button.setMaxWidth(Double.MAX_VALUE); return button; }
     private RoutineItem current() { return routine.items().get(itemIndex); }
     private void tick() {
+        if (livePreviewActive) {
+            statusLabel.setText("Status: Live preview — alignment not analyzed");
+            suggestionLabel.setText("Guidance: Follow the written teaching guide. Saha can display your camera, but the pose model is not connected yet.");
+            optionalLabel.setText("Optional adjustment: " + current().pose().modifications().getFirst());
+            confidenceLabel.setText("Camera: Active · alignment confidence unavailable");
+            if (!paused && ++clockTicks % 10 == 0 && --remaining <= 0) advance(false);
+            timerLabel.setText(format(remaining) + (paused ? " · paused" : ""));
+            return;
+        }
         var frame = landmarks.nextFrame(); drawFrame(frame);
         if (landmarks.isTransitioning()) {
             statusLabel.setText("Status: Moving into " + current().pose().displayName());
@@ -300,7 +321,7 @@ public final class SahaApp extends Application {
         phaseLabel.setText(item.phase().toUpperCase()); timerLabel.setText(format(remaining));
         updateTeachingView(item);
         updatePracticePath();
-        drawFrame(landmarks.nextFrame());
+        if (!livePreviewActive) drawFrame(landmarks.nextFrame());
     }
     private void updateTeachingView(RoutineItem item) {
         if (teachingView == null) return;
@@ -315,10 +336,10 @@ public final class SahaApp extends Application {
                 ? "Reference-validated teaching illustration"
                 : "Illustration under review. Follow the written setup or skip this pose.");
         boundary.setWrapText(true); boundary.setMinHeight(Region.USE_PREF_SIZE); boundary.getStyleClass().add(illustrations.reviewed(item.pose().id()).isPresent() ? "visual-approved" : "visual-review-warning");
-        var support = new Label(status.map(value -> "Required support: " + value.grounding().requiredContacts().stream().map(contact -> contact.name().toLowerCase().replace('_', ' ')).sorted().reduce((a, b) -> a + ", " + b).orElse("not defined")).orElse("Required support is still being defined."));
+        var support = new Label(status.map(value -> "On the floor: " + value.grounding().requiredContacts().stream().map(contact -> contact.name().toLowerCase().replace('_', ' ')).sorted().reduce((a, b) -> a + ", " + b).orElse("not defined")).orElse("Floor contact is still being defined."));
         support.setWrapText(true); support.setMinHeight(Region.USE_PREF_SIZE); support.getStyleClass().add("support-label");
         var spacer = new Region(); VBox.setVgrow(spacer, Priority.ALWAYS);
-        var floor = new Label("FLOOR / SUPPORT SURFACE"); floor.setMaxWidth(Double.MAX_VALUE); floor.getStyleClass().add("teaching-floor");
+        var floor = new Label("FLOOR"); floor.setMaxWidth(Double.MAX_VALUE); floor.getStyleClass().add("teaching-floor");
         teachingView.getChildren().addAll(heading, title, instruction, review, boundary, support, spacer, floor);
     }
     private void updatePracticePath() {
@@ -349,7 +370,7 @@ public final class SahaApp extends Application {
     private void saveMetric(boolean skipped) {
         try { store.append(new SessionMetric(current().pose().id(), Instant.now(), current().durationSeconds() - remaining, skipped ? 0 : .82, 1, skipped, .91, true)); } catch (IOException ignored) { }
     }
-    private void finish(boolean completed) { if (clock != null) clock.stop(); showProgress(completed); }
+    private void finish(boolean completed) { if (clock != null) clock.stop(); stopCameraPreview(); showProgress(completed); }
 
     private void showProgress(boolean completed) {
         List<SessionMetric> history; try { history = store.load(); } catch (IOException e) { history = List.of(); }
@@ -378,7 +399,7 @@ public final class SahaApp extends Application {
         var floor = new Line(offsetX + scale * .04, floorY, offsetX + scale * .96, floorY);
         floor.setStroke(Color.web("#6fa89d")); floor.setStrokeWidth(2); floor.getStrokeDashArray().addAll(8.0, 6.0);
         bodyView.getChildren().add(floor);
-        var floorLabel = new Text(offsetX + scale * .05, floorY - 6, "floor reference"); floorLabel.setFill(Color.web("#86aaa3"));
+        var floorLabel = new Text(offsetX + scale * .05, floorY - 6, "floor"); floorLabel.setFill(Color.web("#86aaa3"));
         bodyView.getChildren().add(floorLabel);
         var links = List.of(new LandmarkName[]{LandmarkName.LEFT_SHOULDER,LandmarkName.RIGHT_SHOULDER}, new LandmarkName[]{LandmarkName.LEFT_HIP,LandmarkName.RIGHT_HIP}, new LandmarkName[]{LandmarkName.LEFT_HIP,LandmarkName.LEFT_KNEE}, new LandmarkName[]{LandmarkName.LEFT_KNEE,LandmarkName.LEFT_ANKLE}, new LandmarkName[]{LandmarkName.LEFT_ANKLE,LandmarkName.LEFT_TOE}, new LandmarkName[]{LandmarkName.RIGHT_HIP,LandmarkName.RIGHT_KNEE}, new LandmarkName[]{LandmarkName.RIGHT_KNEE,LandmarkName.RIGHT_ANKLE}, new LandmarkName[]{LandmarkName.RIGHT_ANKLE,LandmarkName.RIGHT_TOE}, new LandmarkName[]{LandmarkName.LEFT_SHOULDER,LandmarkName.LEFT_ELBOW}, new LandmarkName[]{LandmarkName.LEFT_ELBOW,LandmarkName.LEFT_WRIST}, new LandmarkName[]{LandmarkName.LEFT_WRIST,LandmarkName.LEFT_HAND}, new LandmarkName[]{LandmarkName.RIGHT_SHOULDER,LandmarkName.RIGHT_ELBOW}, new LandmarkName[]{LandmarkName.RIGHT_ELBOW,LandmarkName.RIGHT_WRIST}, new LandmarkName[]{LandmarkName.RIGHT_WRIST,LandmarkName.RIGHT_HAND});
         for (var link : links) { var a=frame.landmarks().get(link[0]); var b=frame.landmarks().get(link[1]); if (a == null || b == null) continue; var line=new Line(offsetX+a.x()*scale,offsetY+a.y()*scale,offsetX+b.x()*scale,offsetY+b.y()*scale); line.setStroke(Color.web("#8dd7c6")); line.setStrokeWidth(5); bodyView.getChildren().add(line); }
