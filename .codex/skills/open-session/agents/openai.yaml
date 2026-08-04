@@ -1,0 +1,4 @@
+interface:
+  display_name: "Open Saha Session"
+  short_description: "Resume Saha work safely and productively"
+  default_prompt: "Use $open-session to resume the Saha project and begin the next verified vertical slice."

@@ -1,0 +1,4 @@
+interface:
+  display_name: "Close Saha Session"
+  short_description: "Verify and hand off Saha repository work"
+  default_prompt: "Use $close-session to verify and close the current Saha development session."
