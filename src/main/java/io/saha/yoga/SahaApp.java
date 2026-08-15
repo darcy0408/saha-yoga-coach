@@ -338,9 +338,22 @@ public final class SahaApp extends Application {
         boundary.setWrapText(true); boundary.setMinHeight(Region.USE_PREF_SIZE); boundary.getStyleClass().add(illustrations.reviewed(item.pose().id()).isPresent() ? "visual-approved" : "visual-review-warning");
         var support = new Label(status.map(value -> "On the floor: " + value.grounding().requiredContacts().stream().map(contact -> contact.name().toLowerCase().replace('_', ' ')).sorted().reduce((a, b) -> a + ", " + b).orElse("not defined")).orElse("Floor contact is still being defined."));
         support.setWrapText(true); support.setMinHeight(Region.USE_PREF_SIZE); support.getStyleClass().add("support-label");
-        var spacer = new Region(); VBox.setVgrow(spacer, Priority.ALWAYS);
+        var text = new VBox(10, title, instruction, review, boundary, support);
+        HBox.setHgrow(text, Priority.ALWAYS);
+        var body = new HBox(14, text);
+        if (landmarks instanceof DemoLandmarkSource demo) {
+            // Target geometry lives with the demo source today; when a camera
+            // source arrives the targets move to a pose library and this check goes away.
+            var glyph = new PoseGlyphView();
+            glyph.show(demo.targetFrame());
+            var caption = new Label("FROM TARGET LANDMARKS"); caption.getStyleClass().add("support-label");
+            var glyphColumn = new VBox(4, glyph, caption); glyphColumn.setAlignment(Pos.BOTTOM_CENTER);
+            VBox.setVgrow(glyph, Priority.ALWAYS);
+            body.getChildren().add(glyphColumn);
+        }
+        VBox.setVgrow(body, Priority.ALWAYS);
         var floor = new Label("FLOOR"); floor.setMaxWidth(Double.MAX_VALUE); floor.getStyleClass().add("teaching-floor");
-        teachingView.getChildren().addAll(heading, title, instruction, review, boundary, support, spacer, floor);
+        teachingView.getChildren().addAll(heading, body, floor);
     }
     private void updatePracticePath() {
         if (practicePath == null) return;
