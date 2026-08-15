@@ -182,16 +182,25 @@ public final class DemoLandmarkSource implements LandmarkSource {
         }
     }
     private void lowLunge(EnumMap<LandmarkName, Landmark> p) {
-        at(p,LandmarkName.NOSE,.49,.15); shoulders(p,.43,.27,.55,.27); arms(p,.35,.13,.45,.02,.63,.13,.53,.02);
-        hips(p,.46,.51,.54,.51); legs(p,.31,.65,.31,.85,.68,.70,.84,.83); toes(p,.22,.85,.91,.83);
+        // Anjaneyasana, facing left: hips sunk to knee height, front shin
+        // vertical over a flat foot, back knee and shin resting on the floor
+        // with the foot pointed back, torso upright, arms reaching overhead.
+        at(p,LandmarkName.NOSE,.44,.40); shoulders(p,.53,.50,.55,.50); arms(p,.55,.35,.57,.21,.57,.35,.59,.21);
+        hips(p,.51,.74,.53,.74); legs(p,.30,.72,.30,.94,.66,.92,.875,.94); toes(p,.22,.95,.95,.955);
     }
     private void bridge(EnumMap<LandmarkName, Landmark> p) {
-        at(p,LandmarkName.NOSE,.18,.67); shoulders(p,.28,.70,.30,.73); arms(p,.40,.77,.53,.81,.42,.79,.55,.83);
-        hips(p,.53,.52,.56,.54); legs(p,.68,.62,.73,.81,.71,.64,.77,.82); toes(p,.80,.81,.84,.82);
+        // Setu Bandha, face up: head and shoulders rest on the floor, the
+        // torso rises in a straight line to the hips and knees, feet stay
+        // flat beneath the knees, arms press into the floor alongside.
+        at(p,LandmarkName.NOSE,.17,.88); shoulders(p,.29,.90,.31,.90); arms(p,.44,.92,.58,.93,.46,.93,.60,.94);
+        hips(p,.50,.785,.52,.785); legs(p,.70,.665,.70,.885,.72,.675,.72,.895); toes(p,.775,.92,.795,.93);
     }
     private void seatedFold(EnumMap<LandmarkName, Landmark> p) {
-        at(p,LandmarkName.NOSE,.61,.45); shoulders(p,.53,.52,.56,.54); arms(p,.66,.59,.76,.66,.69,.61,.79,.68);
-        hips(p,.39,.66,.42,.69); legs(p,.58,.69,.77,.70,.61,.73,.80,.74); toes(p,.84,.69,.87,.73);
+        // Paschimottanasana, facing right: sitting bones grounded, legs long
+        // with feet flexed toward the ceiling, torso folded low over the
+        // thighs, head released toward the shins, hands reaching to the feet.
+        at(p,LandmarkName.NOSE,.70,.88); shoulders(p,.575,.815,.595,.825); arms(p,.72,.845,.855,.87,.74,.855,.875,.88);
+        hips(p,.35,.895,.37,.905); legs(p,.58,.925,.80,.93,.59,.935,.81,.94); toes(p,.805,.855,.815,.865);
     }
     private void rest(EnumMap<LandmarkName, Landmark> p) {
         at(p,LandmarkName.NOSE,.17,.67); shoulders(p,.28,.70,.32,.73); arms(p,.41,.63,.54,.58,.43,.80,.56,.85);

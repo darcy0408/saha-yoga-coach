@@ -345,8 +345,8 @@ public final class SahaApp extends Application {
             // Target geometry lives with the demo source today; when a camera
             // source arrives the targets move to a pose library and this check goes away.
             var glyph = new PoseGlyphView();
-            glyph.show(demo.targetFrame());
-            var caption = new Label("FROM TARGET LANDMARKS"); caption.getStyleClass().add("support-label");
+            glyph.show(demo.targetFrame(), demo.faceDirection());
+            var caption = new Label("TARGET LANDMARKS"); caption.getStyleClass().add("support-label");
             var glyphColumn = new VBox(4, glyph, caption); glyphColumn.setAlignment(Pos.BOTTOM_CENTER);
             VBox.setVgrow(glyph, Priority.ALWAYS);
             body.getChildren().add(glyphColumn);

@@ -30,10 +30,10 @@ public final class GlyphGallerySnapshot extends Application {
         for (var pose : new PoseCatalog().all()) {
             source.selectPose(pose.id());
             var glyph = new PoseGlyphView();
-            glyph.show(source.targetFrame());
+            glyph.show(source.targetFrame(), source.faceDirection());
             glyph.setMinSize(210, 190); glyph.setPrefSize(210, 190);
             var name = new Label(pose.displayName()); name.getStyleClass().add("teaching-pose-name");
-            var caption = new Label("FROM TARGET LANDMARKS"); caption.getStyleClass().add("support-label");
+            var caption = new Label("TARGET LANDMARKS"); caption.getStyleClass().add("support-label");
             var card = new VBox(6, name, glyph, caption);
             card.getStyleClass().add("pose-draft-card"); card.setPrefSize(276, 272);
             gallery.getChildren().add(card);

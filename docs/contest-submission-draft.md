@@ -105,7 +105,7 @@ Java is not a wrapper here; it is the entire product:
 - **JavaFX 26** — onboarding, calibration, coaching, and progress screens.
 
 Supporting cast: OpenPnP OpenCV (local preview), ONNX Runtime (staged for
-Phase 2 inference), Jackson (derived-metric JSON), JUnit 5 (41 tests covering
+Phase 2 inference), Jackson (derived-metric JSON), JUnit 5 (42 tests covering
 geometry, confidence gating, cue limits, instruction-only truthfulness,
 bilateral rules, routine generation, personalization, persistence, and the
 generated pose-glyph figures).
@@ -181,7 +181,7 @@ No purchases, accounts, API keys, or cloud services are required.
   (`JavaLanguageVersion.of(26)` by default) and applies `--enable-preview` to
   compile, test, and run tasks.
 - Verified on **Temurin 26.0.1** with **Gradle 9.4**; `gradlew.bat clean test`
-  passes 41 tests.
+  passes 42 tests.
 - Java 26 preview `LazyConstant` is exercised directly in
   `src/test/java/io/saha/yoga/routine/Java26LazyConstantTest.java`.
 

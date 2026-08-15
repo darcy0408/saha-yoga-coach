@@ -1,6 +1,7 @@
 package io.saha.yoga.illustration;
 
 import io.saha.yoga.domain.LandmarkFrame;
+import io.saha.yoga.vision.FaceDirection;
 import io.saha.yoga.vision.LandmarkSource;
 import javafx.scene.layout.Pane;
 import javafx.scene.paint.Color;
@@ -27,6 +28,7 @@ public final class PoseGlyphView extends Pane {
     private static final Color PAPER = Color.web("#f5efe1");
 
     private GlyphFigure figure;
+    private FaceDirection gaze = FaceDirection.FRONT;
     private Set<GlyphFigure.Limb> flagged = Set.of();
 
     public PoseGlyphView() {
@@ -36,8 +38,11 @@ public final class PoseGlyphView extends Pane {
         heightProperty().addListener((ignored, oldValue, newValue) -> redraw());
     }
 
-    public void show(LandmarkFrame frame) {
+    public void show(LandmarkFrame frame) { show(frame, FaceDirection.FRONT); }
+
+    public void show(LandmarkFrame frame, FaceDirection direction) {
         figure = GlyphFigure.of(frame);
+        gaze = direction;
         redraw();
     }
 
@@ -88,6 +93,17 @@ public final class PoseGlyphView extends Pane {
             circle.setStroke(INK);
             circle.setStrokeWidth(stroke);
             getChildren().add(circle);
+            if (gaze != FaceDirection.FRONT) {
+                // a short nose tick on the rim showing which way the face points
+                double vx = gaze == FaceDirection.LEFT ? -1 : gaze == FaceDirection.RIGHT ? 1 : 0;
+                double vy = gaze == FaceDirection.UP ? -1 : gaze == FaceDirection.DOWN ? 1 : 0;
+                double rim = figure.headRadius() * scale;
+                var tick = new Line(headX + vx * rim, headY + vy * rim, headX + vx * rim * 1.5, headY + vy * rim * 1.5);
+                tick.setStroke(INK);
+                tick.setStrokeWidth(stroke * .8);
+                tick.setStrokeLineCap(StrokeLineCap.ROUND);
+                getChildren().add(tick);
+            }
         });
     }
 }
