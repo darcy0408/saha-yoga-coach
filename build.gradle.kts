@@ -41,15 +41,6 @@ tasks.test {
     jvmArgs("--enable-preview")
 }
 
-tasks.register<JavaExec>("glyphGallerySnapshot") {
-    group = "verification"
-    description = "Renders the generated pose glyph for every catalog pose to build/review/glyph-gallery.png"
-    classpath = sourceSets.main.get().runtimeClasspath
-    mainClass = "io.saha.yoga.illustration.GlyphGallerySnapshotLauncher"
-    args(layout.buildDirectory.file("review/glyph-gallery.png").get().asFile.absolutePath)
-    jvmArgs("--enable-preview", "--enable-native-access=ALL-UNNAMED")
-}
-
 tasks.register<JavaExec>("poseGallerySnapshot") {
     group = "verification"
     description = "Renders licensed teaching-asset candidates to build/review/pose-gallery.png"
