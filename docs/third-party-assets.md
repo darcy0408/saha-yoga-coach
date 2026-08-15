@@ -38,3 +38,37 @@ depict other asanas. SVG Repo downloads were rejected after the server returned
 a security-checkpoint page instead of a valid SVG. Paid stock images,
 screenshots supplied for discussion, YogaNotes artwork, and assets without
 independently verifiable permissions are excluded.
+
+## Sweep of August 15, 2026
+
+A deliberate search for freely licensed artwork covering the remaining ten
+poses concluded that no verifiably CC0 set exists for this catalog. Findings,
+recorded so the question does not have to be reopened from scratch:
+
+- **OpenClipart `21241`–`21249` (mpuech, CC0)** is the most coherent CC0 yoga
+  set available, but it depicts neighbouring poses rather than this catalog's:
+  `21247` is a shoulder bridge with the legs extended straight rather than the
+  feet-flat bridge Saha cues, `21242` is Maha Mudra / Janu Sirsasana rather
+  than the two-leg seated fold, and `21241` is extended puppy rather than
+  cat–cow. Naming any of them with a catalog pose would repeat exactly the
+  overclaiming this project is built to prevent, so none were taken.
+- **OpenClipart `311929` / `312034`** hold roughly twelve poses in one
+  consistent style inside a single SVG, which CC0 would allow splitting. It was
+  rejected on provenance: the uploader's own description credits "Potamuz from
+  Pixabay", so the uploader is not the author and their CC0 dedication is not
+  authoritative. The upload date (December 2018) precedes Pixabay's move away
+  from CC0 in January 2019, but no original Pixabay page or archived snapshot
+  could be produced to prove the chain.
+- **Wikimedia Commons** is a dead end for these poses: the candidate Warrior I
+  and Warrior II images are CC BY-SA 3.0 or CC BY 2.0, and attribution-required
+  licenses are barred by the contest rules.
+- **Pixabay and Unsplash** post-2019 licenses forbid redistributing an image as
+  a standalone file, which is what packaging it in this repository would do.
+- **Sritattvanidhi** (19th century, public domain) covers only obscure asanas
+  and renders Utkatasana as a deep squat rather than the modern chair pose.
+- **Niels Bukh, *Primary Gymnastics* (1924)** is public domain and ancestral to
+  several modern asanas, but only two plates are on Commons and 1920s
+  photographs suit neither this catalog nor the interface.
+
+Mountain, chair, Warrior I, triangle, cat–cow, bird dog, low lunge and final
+rest therefore have no audited illustration, and keep written guidance only.
