@@ -81,6 +81,25 @@ class DemoLandmarkSourceTest {
         }
     }
 
+    @Test void floorPosesRespectAnatomyAndGravity() {
+        var source = new DemoLandmarkSource();
+        source.selectPose("low_lunge"); var lunge = source.targetFrame().landmarks();
+        assertEquals(LandmarkSource.FLOOR_Y, lunge.get(LandmarkName.RIGHT_KNEE).y(), .06, "low lunge rests the back knee on the floor");
+        assertEquals(lunge.get(LandmarkName.LEFT_KNEE).x(), lunge.get(LandmarkName.LEFT_ANKLE).x(), .06, "front shin stays vertical over the foot");
+        assertTrue(lunge.get(LandmarkName.LEFT_WRIST).y() < lunge.get(LandmarkName.NOSE).y(), "arms reach overhead");
+        assertTrue(lunge.get(LandmarkName.LEFT_HIP).y() > lunge.get(LandmarkName.LEFT_KNEE).y() - .08, "hips sink toward front-knee height");
+        source.selectPose("bridge"); var bridge = source.targetFrame().landmarks();
+        assertEquals(LandmarkSource.FLOOR_Y, bridge.get(LandmarkName.LEFT_SHOULDER).y(), .07, "bridge keeps the shoulders on the floor");
+        assertEquals(LandmarkSource.FLOOR_Y, bridge.get(LandmarkName.LEFT_TOE).y(), .05, "bridge keeps the feet on the floor");
+        assertTrue(bridge.get(LandmarkName.LEFT_KNEE).y() < bridge.get(LandmarkName.LEFT_HIP).y(), "knees ride above the lifted hips");
+        assertTrue(bridge.get(LandmarkName.LEFT_HIP).y() < bridge.get(LandmarkName.LEFT_SHOULDER).y(), "hips lift off the floor");
+        assertEquals(bridge.get(LandmarkName.LEFT_KNEE).x(), bridge.get(LandmarkName.LEFT_ANKLE).x(), .05, "shins stay vertical so feet sit under knees");
+        source.selectPose("seated_fold"); var fold = source.targetFrame().landmarks();
+        assertEquals(LandmarkSource.FLOOR_Y, fold.get(LandmarkName.LEFT_HIP).y(), .06, "seated fold grounds the sitting bones");
+        assertEquals(fold.get(LandmarkName.LEFT_KNEE).y(), fold.get(LandmarkName.NOSE).y(), .08, "the head folds down toward the shins");
+        assertTrue(fold.get(LandmarkName.LEFT_TOE).y() < fold.get(LandmarkName.LEFT_ANKLE).y(), "feet stay flexed toward the ceiling");
+    }
+
     @Test void mountainStandsOnBothFeet() {
         var source = new DemoLandmarkSource();
         source.selectPose("mountain");

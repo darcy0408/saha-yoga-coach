@@ -34,8 +34,10 @@ public final class TeachingAssetCatalog {
     }
 
     private static TeachingAsset candidate(String id, String name, String file, String source, String hash, String note) {
+        // ENABLED on the entrant's direction (Aug 15 2026): reviewed reference
+        // illustrations now teach during coaching in place of generated figures.
         return new TeachingAsset(id, name, ROOT + file, "Gerald_G", source,
                 "CC0 1.0 Public Domain Dedication", "https://creativecommons.org/publicdomain/zero/1.0/",
-                hash, ReviewState.HUMAN_REVIEWED, note);
+                hash, ReviewState.ENABLED, note);
     }
 }

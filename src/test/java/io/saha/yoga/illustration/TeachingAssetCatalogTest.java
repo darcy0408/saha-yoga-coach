@@ -30,11 +30,12 @@ class TeachingAssetCatalogTest {
         }
     }
 
-    @Test void reviewedCandidatesCannotLeakIntoCoachingBeforeEnablement() {
-        assertTrue(catalog.forPose("warrior_two").isPresent());
-        assertTrue(catalog.forPose("tree").isPresent());
-        assertTrue(catalog.enabledForCoaching("warrior_two").isEmpty());
-        assertTrue(catalog.enabledForCoaching("tree").isEmpty());
+    @Test void onlyEnabledAssetsMayTeachDuringCoaching() {
+        // the retained candidates were human-reviewed and then deliberately
+        // enabled; poses without an audited asset must stay written-only
+        assertTrue(catalog.enabledForCoaching("warrior_two").isPresent());
+        assertTrue(catalog.enabledForCoaching("tree").isPresent());
         assertTrue(catalog.enabledForCoaching("chair").isEmpty());
+        assertTrue(catalog.enabledForCoaching("mountain").isEmpty());
     }
 }

@@ -329,18 +329,32 @@ public final class SahaApp extends Application {
         var heading = new Label("TEACHING GUIDE"); heading.getStyleClass().add("badge");
         var title = new Label(item.pose().displayName()); title.getStyleClass().add("teaching-pose-name");
         var instruction = new Label(item.pose().instructions().getFirst()); instruction.setWrapText(true); instruction.setMinHeight(Region.USE_PREF_SIZE); instruction.getStyleClass().add("teaching-instruction");
+        var asset = teachingAssets.enabledForCoaching(item.pose().id());
         var status = illustrations.status(item.pose().id());
-        var review = new Label(status.map(value -> value.requiredView() + " · visual " + value.reviewState().name().toLowerCase().replace('_', ' ')).orElse("Written guidance only · illustration not yet reviewed"));
+        var review = new Label(asset.map(TeachingAsset::reviewNote)
+                .orElseGet(() -> status.map(value -> value.requiredView() + " · visual " + value.reviewState().name().toLowerCase().replace('_', ' ')).orElse("Written guidance only · illustration not yet reviewed")));
         review.setWrapText(true); review.setMinHeight(Region.USE_PREF_SIZE); review.getStyleClass().add("teaching-review");
-        var boundary = new Label(illustrations.reviewed(item.pose().id()).isPresent()
-                ? "Reference-validated teaching illustration"
+        var boundary = new Label(asset.isPresent()
+                ? "License-verified reference illustration (" + asset.get().licenseName() + ")"
                 : "Illustration under review. Follow the written setup or skip this pose.");
-        boundary.setWrapText(true); boundary.setMinHeight(Region.USE_PREF_SIZE); boundary.getStyleClass().add(illustrations.reviewed(item.pose().id()).isPresent() ? "visual-approved" : "visual-review-warning");
+        boundary.setWrapText(true); boundary.setMinHeight(Region.USE_PREF_SIZE); boundary.getStyleClass().add(asset.isPresent() ? "visual-approved" : "visual-review-warning");
         var support = new Label(status.map(value -> "On the floor: " + value.grounding().requiredContacts().stream().map(contact -> contact.name().toLowerCase().replace('_', ' ')).sorted().reduce((a, b) -> a + ", " + b).orElse("not defined")).orElse("Floor contact is still being defined."));
         support.setWrapText(true); support.setMinHeight(Region.USE_PREF_SIZE); support.getStyleClass().add("support-label");
-        var spacer = new Region(); VBox.setVgrow(spacer, Priority.ALWAYS);
+        var text = new VBox(10, title, instruction, review, boundary, support);
+        HBox.setHgrow(text, Priority.ALWAYS);
+        var body = new HBox(14, text);
+        asset.ifPresent(value -> {
+            var stream = Objects.requireNonNull(SahaApp.class.getResourceAsStream(value.resourcePath()));
+            var art = new ImageView(new Image(stream));
+            art.setPreserveRatio(true); art.setFitWidth(220); art.setFitHeight(185);
+            var artPane = new StackPane(art); artPane.getStyleClass().add("licensed-art-canvas");
+            var credit = new Label("CC0 · " + value.creator()); credit.getStyleClass().add("support-label");
+            var artColumn = new VBox(4, artPane, credit); artColumn.setAlignment(Pos.CENTER);
+            body.getChildren().add(artColumn);
+        });
+        VBox.setVgrow(body, Priority.ALWAYS);
         var floor = new Label("FLOOR"); floor.setMaxWidth(Double.MAX_VALUE); floor.getStyleClass().add("teaching-floor");
-        teachingView.getChildren().addAll(heading, title, instruction, review, boundary, support, spacer, floor);
+        teachingView.getChildren().addAll(heading, body, floor);
     }
     private void updatePracticePath() {
         if (practicePath == null) return;
@@ -354,7 +368,7 @@ public final class SahaApp extends Application {
             var marker = new Label(i == itemIndex ? "YOU ARE HERE" : item.phase().toUpperCase()); marker.getStyleClass().add("path-marker");
             var name = new Label(item.pose().displayName()); name.setWrapText(true); name.getStyleClass().add("path-name");
             var duration = new Label(format(item.durationSeconds())); duration.getStyleClass().add("path-duration");
-            var visualStatus = new Label(illustrations.reviewed(item.pose().id()).isPresent() ? "VALIDATED VISUAL" : "WRITTEN GUIDE"); visualStatus.getStyleClass().add("path-visual-status");
+            var visualStatus = new Label(teachingAssets.enabledForCoaching(item.pose().id()).isPresent() ? "REFERENCE VISUAL" : "WRITTEN GUIDE"); visualStatus.getStyleClass().add("path-visual-status");
             var card = new VBox(2, marker, name, duration, visualStatus); card.getStyleClass().add("path-pose");
             if (i < itemIndex) card.getStyleClass().add("complete");
             if (i == itemIndex) card.getStyleClass().add("current");
@@ -385,9 +399,21 @@ public final class SahaApp extends Application {
     }
     private VBox stat(String label, String value) { var number = new Label(value); number.getStyleClass().add("stat-number"); var box = new VBox(7, new Label(label), number); box.getStyleClass().add("card"); HBox.setHgrow(box, Priority.ALWAYS); return box; }
 
-    private Pane createBodyView() { var pane = new Pane(); pane.setMinSize(420, 180); return pane; }
+    private LandmarkFrame lastDrawnFrame;
+    private Pane createBodyView() {
+        var pane = new Pane();
+        pane.setMinSize(420, 180);
+        // The calibration screen draws exactly once, before layout has sized the
+        // pane, so the figure lands at the 420x180 fallback scale. Redraw when the
+        // real size arrives. (The coach screen redraws every tick regardless.)
+        pane.widthProperty().addListener((ignored, oldValue, newValue) -> redrawLastFrame(pane));
+        pane.heightProperty().addListener((ignored, oldValue, newValue) -> redrawLastFrame(pane));
+        return pane;
+    }
+    private void redrawLastFrame(Pane pane) { if (pane == bodyView && lastDrawnFrame != null) drawFrame(lastDrawnFrame); }
     private void drawFrame(LandmarkFrame frame) {
         if (bodyView == null) return;
+        lastDrawnFrame = frame;
         bodyView.getChildren().clear();
         double w = Math.max(420, bodyView.getWidth()), h = Math.max(180, bodyView.getHeight());
         double scale = Math.min(w * .92, h * .82);
