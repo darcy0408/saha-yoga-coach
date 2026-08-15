@@ -41,6 +41,15 @@ tasks.test {
     jvmArgs("--enable-preview")
 }
 
+tasks.register<JavaExec>("teachingCardSnapshot") {
+    group = "verification"
+    description = "Renders the coaching teaching card, illustrated and written-only, to build/review/teaching-card.png"
+    classpath = sourceSets.main.get().runtimeClasspath
+    mainClass = "io.saha.yoga.illustration.TeachingCardSnapshotLauncher"
+    args(layout.buildDirectory.file("review/teaching-card.png").get().asFile.absolutePath)
+    jvmArgs("--enable-preview", "--enable-native-access=ALL-UNNAMED")
+}
+
 tasks.register<JavaExec>("poseGallerySnapshot") {
     group = "verification"
     description = "Renders licensed teaching-asset candidates to build/review/pose-gallery.png"

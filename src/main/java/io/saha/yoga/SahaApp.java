@@ -348,7 +348,7 @@ public final class SahaApp extends Application {
             var art = new ImageView(new Image(stream));
             art.setPreserveRatio(true); art.setFitWidth(220); art.setFitHeight(185);
             var artPane = new StackPane(art); artPane.getStyleClass().add("licensed-art-canvas");
-            var credit = new Label(value.licenseName() + " · " + value.creator()); credit.getStyleClass().add("support-label");
+            var credit = new Label("CC0 · " + value.creator()); credit.getStyleClass().add("support-label");
             var artColumn = new VBox(4, artPane, credit); artColumn.setAlignment(Pos.CENTER);
             body.getChildren().add(artColumn);
         });
