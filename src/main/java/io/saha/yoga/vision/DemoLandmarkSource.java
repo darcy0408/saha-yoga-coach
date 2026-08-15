@@ -54,6 +54,16 @@ public final class DemoLandmarkSource implements LandmarkSource {
             case "bridge" -> bridge(points);
             case "seated_fold" -> seatedFold(points);
             case "rest" -> rest(points);
+            case "easy_seat" -> easySeat(points, false);
+            case "seated_side_reach" -> easySeat(points, true);
+            case "seated_twist" -> easySeat(points, false);
+            case "head_to_knee" -> headToKnee(points);
+            case "upward_salute" -> upwardSalute(points);
+            case "standing_fold" -> standingFold(points);
+            case "downward_dog" -> downwardDog(points);
+            case "goddess" -> goddess(points);
+            case "plank" -> plank(points);
+            case "locust" -> locust(points);
             default -> { }
         }
         constrain(points, facingFor(id));
@@ -94,11 +104,11 @@ public final class DemoLandmarkSource implements LandmarkSource {
     public LandmarkFrame targetFrame() { return new LandmarkFrame(Instant.now(), target == null ? build(poseId) : target); }
     private FaceDirection facingFor(String id) { return switch(id) {
         case "warrior_two" -> FaceDirection.LEFT;
-        case "cat_cow", "bird_dog" -> FaceDirection.DOWN;
+        case "cat_cow", "bird_dog", "downward_dog", "plank", "standing_fold" -> FaceDirection.DOWN;
         case "triangle" -> FaceDirection.UP;
         case "chair" -> FaceDirection.RIGHT;
-        case "seated_fold" -> FaceDirection.RIGHT;
-        case "bridge", "rest" -> FaceDirection.UP;
+        case "seated_fold", "head_to_knee" -> FaceDirection.RIGHT;
+        case "bridge", "rest", "locust", "upward_salute" -> FaceDirection.UP;
         case "low_lunge" -> FaceDirection.LEFT;
         default -> FaceDirection.FRONT;
     }; }
@@ -107,7 +117,10 @@ public final class DemoLandmarkSource implements LandmarkSource {
             : "Soften your knees, fold forward, place your hands down, then move one knee at a time."; }
     @Override public double spineBend() { return poseId.equals("cat_cow") ? Math.sin(System.nanoTime()/1_200_000_000.0)*.075 : 0; }
     private boolean crossesFloorBoundary(String from,String to) { return isFloor(from)!=isFloor(to); }
-    private boolean isFloor(String id) { return switch(id){case "cat_cow","bird_dog","bridge","seated_fold","rest"->true;default->false;}; }
+    private boolean isFloor(String id) { return switch(id){
+        case "cat_cow","bird_dog","bridge","seated_fold","rest","easy_seat","seated_side_reach","seated_twist",
+             "head_to_knee","downward_dog","plank","locust" -> true;
+        default -> false;}; }
     private EnumMap<LandmarkName, Landmark> forwardFold() {
         var p=new EnumMap<LandmarkName,Landmark>(LandmarkName.class); standing(p);
         at(p,LandmarkName.NOSE,.48,.57); shoulders(p,.47,.51,.53,.52); hips(p,.46,.46,.54,.47);
@@ -205,6 +218,50 @@ public final class DemoLandmarkSource implements LandmarkSource {
     private void rest(EnumMap<LandmarkName, Landmark> p) {
         at(p,LandmarkName.NOSE,.17,.67); shoulders(p,.28,.70,.32,.73); arms(p,.41,.63,.54,.58,.43,.80,.56,.85);
         hips(p,.53,.70,.57,.73); legs(p,.70,.68,.84,.64,.72,.77,.86,.82); toes(p,.90,.63,.92,.82);
+    }
+    private void easySeat(EnumMap<LandmarkName, Landmark> p, boolean reaching) {
+        // cross-legged, sitting bones down, shins folded in front
+        at(p,LandmarkName.NOSE,.50,.42); shoulders(p,.43,.54,.57,.54);
+        hips(p,.46,.79,.54,.79); legs(p,.34,.86,.47,.92,.66,.86,.53,.92); toes(p,.42,.95,.58,.95);
+        if (reaching) arms(p,.38,.60,.44,.44,.62,.66,.66,.80);
+        else arms(p,.38,.66,.44,.78,.62,.66,.56,.78);
+    }
+    private void headToKnee(EnumMap<LandmarkName, Landmark> p) {
+        // one leg long, the other folded in, torso hinged over the long leg
+        at(p,LandmarkName.NOSE,.62,.74); shoulders(p,.53,.70,.55,.72); arms(p,.68,.78,.80,.84,.70,.80,.82,.86);
+        hips(p,.38,.86,.40,.88); legs(p,.60,.90,.80,.92,.48,.94,.56,.90); toes(p,.85,.86,.60,.94);
+    }
+    private void upwardSalute(EnumMap<LandmarkName, Landmark> p) {
+        // standing tall, both arms sweeping overhead
+        at(p,LandmarkName.NOSE,.50,.10); shoulders(p,.44,.21,.56,.21); arms(p,.40,.10,.46,.00,.60,.10,.54,.00);
+        hips(p,.46,.48,.54,.48); legs(p,.46,.70,.45,.88,.54,.70,.55,.88); toes(p,.45,.96,.55,.96);
+    }
+    private void standingFold(EnumMap<LandmarkName, Landmark> p) {
+        // hinged from the hips with the head and arms hanging heavy
+        at(p,LandmarkName.NOSE,.48,.62); shoulders(p,.46,.54,.54,.55); arms(p,.45,.68,.44,.82,.55,.68,.56,.82);
+        hips(p,.46,.44,.54,.44); legs(p,.46,.68,.45,.88,.54,.68,.55,.88); toes(p,.44,.95,.56,.95);
+    }
+    private void downwardDog(EnumMap<LandmarkName, Landmark> p) {
+        // inverted V: hands and feet down, hips lifted high
+        at(p,LandmarkName.NOSE,.26,.62); shoulders(p,.32,.56,.34,.58); arms(p,.24,.72,.17,.88,.26,.74,.19,.90);
+        at(p,LandmarkName.LEFT_HAND,.13,.94); at(p,LandmarkName.RIGHT_HAND,.15,.95);
+        hips(p,.60,.34,.62,.36); legs(p,.70,.60,.78,.86,.72,.62,.80,.88); toes(p,.83,.94,.85,.95);
+    }
+    private void goddess(EnumMap<LandmarkName, Landmark> p) {
+        // wide stance, toes turned out, both knees bent, elbows bent up
+        at(p,LandmarkName.NOSE,.50,.20); shoulders(p,.42,.32,.58,.32); arms(p,.32,.38,.30,.24,.68,.38,.70,.24);
+        hips(p,.44,.56,.56,.56); legs(p,.30,.72,.30,.90,.70,.72,.70,.90); toes(p,.22,.95,.78,.95);
+    }
+    private void plank(EnumMap<LandmarkName, Landmark> p) {
+        // one long line from heels to crown, supported on the hands
+        at(p,LandmarkName.NOSE,.20,.66); shoulders(p,.30,.70,.32,.72); arms(p,.29,.80,.28,.90,.31,.82,.30,.92);
+        at(p,LandmarkName.LEFT_HAND,.27,.95); at(p,LandmarkName.RIGHT_HAND,.29,.95);
+        hips(p,.58,.72,.60,.74); legs(p,.74,.78,.88,.86,.76,.80,.90,.88); toes(p,.92,.94,.94,.95);
+    }
+    private void locust(EnumMap<LandmarkName, Landmark> p) {
+        // face down, chest and legs lifted a comfortable amount
+        at(p,LandmarkName.NOSE,.20,.78); shoulders(p,.30,.84,.32,.85); arms(p,.44,.90,.58,.92,.46,.91,.60,.93);
+        hips(p,.60,.90,.62,.91); legs(p,.76,.88,.90,.82,.78,.89,.92,.84); toes(p,.94,.78,.96,.80);
     }
     private void shoulders(EnumMap<LandmarkName, Landmark> p,double lx,double ly,double rx,double ry){at(p,LandmarkName.LEFT_SHOULDER,lx,ly);at(p,LandmarkName.RIGHT_SHOULDER,rx,ry);}
     private void hips(EnumMap<LandmarkName, Landmark> p,double lx,double ly,double rx,double ry){at(p,LandmarkName.LEFT_HIP,lx,ly);at(p,LandmarkName.RIGHT_HIP,rx,ry);}

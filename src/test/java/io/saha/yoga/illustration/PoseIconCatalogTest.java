@@ -41,4 +41,13 @@ class PoseIconCatalogTest {
     @Test void unknownPoseHasNoIcon() {
         assertTrue(catalog.forPose("handstand").isEmpty());
     }
+
+    @Test void almostEveryRoutinePoseCanBeIllustrated() {
+        var poses = new PoseCatalog().all();
+        var unillustrated = poses.stream().map(pose -> pose.id()).filter(id -> catalog.forPose(id).isEmpty()).toList();
+        // Warrior II falls back to the audited CC0 illustration; mountain and
+        // bird dog have no honest match anywhere and stay written-only.
+        assertEquals(Set.of("mountain", "warrior_two", "bird_dog"), Set.copyOf(unillustrated),
+                "an unexpected pose lost its figure");
+    }
 }

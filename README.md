@@ -13,7 +13,8 @@ Home yoga videos cannot notice when someone leaves the frame, needs a gentler op
 ## Implemented features
 
 - Polished JavaFX onboarding, calibration, coaching, and progress screens.
-- A 19:10 beginner routine with warm-up, main sequence, cooldown, and 12 poses.
+- A beginner practice of 22 poses in seven phases — centering, warm-up, standing, balance, floor work, cooldown, rest — about 20 minutes end to end.
+- A minimal line figure for each pose, stroked live from MIT-licensed vector geometry, with poses that have no verified figure saying so rather than showing a near-miss.
 - A 1–5 intensity control that transparently adjusts active hold times without introducing advanced poses.
 - Structured instructions, modifications, landmark requirements, angle ranges, and general cautions.
 - Opt-in, local OpenCV camera preview during calibration and practice; frames are transient and never analyzed or stored in this build.

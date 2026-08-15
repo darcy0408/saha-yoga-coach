@@ -43,8 +43,11 @@ engineered so it *cannot* claim more than it measured.
 
 ### What Saha does
 
-Saha guides an approximately 20-minute beginner routine of 12 poses with
-warm-up, main sequence, and cooldown. During practice it:
+Saha guides an approximately 20-minute beginner practice of 22 poses,
+sequenced the way a class actually runs: centering, a floor warm-up, standing
+work while the body is warm, one balance, floor strength and a gentle
+backbend, then seated folds and twists that unwind into final rest. During
+practice it:
 
 - shows structured instructions, modifications, and general cautions per pose,
   beside a license-verified reference figure drawn live from MIT-licensed
@@ -93,7 +96,7 @@ Java is not a wrapper here; it is the entire product:
 
 - **Java 26 toolchain** — `build.gradle.kts` pins a Java 26 Gradle toolchain;
   the build is verified on Temurin 26.0.1 with Gradle 9.4.
-- **Preview `LazyConstant`** (Java 26 preview API) — the immutable 12-pose
+- **Preview `LazyConstant`** (Java 26 preview API) — the immutable 22-pose
   catalog is constructed exactly once, on first use; `--enable-preview` is
   applied consistently across compile, test, and run.
 - **Records** — landmarks, measurements, session metrics, and events are
@@ -138,7 +141,7 @@ earns live inference only when the model's provenance and behavior are proven.
 ## Brief written summary (required by rules)
 
 Saha is a privacy-first yoga coach written entirely in Java 26. A JavaFX
-desktop app guides a 20-minute, 12-pose beginner routine, converts local
+desktop app guides a 20-minute, 22-pose beginner practice, converts local
 anonymous body landmarks into at most two cautious alignment cues, pauses
 whenever landmark confidence is low, and personalizes future sessions from
 derived metrics it stores only in local JSON. Sealed result types make

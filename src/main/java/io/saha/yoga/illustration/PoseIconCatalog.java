@@ -35,16 +35,26 @@ public final class PoseIconCatalog {
     // (nothing in the pack extends an opposite arm and leg from all fours).
     // Warrior I and low lunge share one icon because both are that same high
     // lunge shape.
-    private static final Map<String, String> ICON_BY_POSE = Map.of(
-            "chair", "SquatPose",
-            "warrior_one", "LungePose",
-            "triangle", "TrianglePose",
-            "tree", "TreePose",
-            "cat_cow", "CatPose",
-            "low_lunge", "LungePose",
-            "bridge", "BridgeYogaPose",
-            "seated_fold", "SeatedForwardBendPose",
-            "rest", "RestPose");
+    private static final Map<String, String> ICON_BY_POSE = Map.ofEntries(
+            Map.entry("easy_seat", "SeatedPose"),
+            Map.entry("seated_side_reach", "SittingArmRaisePose"),
+            Map.entry("cat_cow", "CatPose"),
+            Map.entry("downward_dog", "DownwardFacingDog"),
+            Map.entry("standing_fold", "StandingForwardBendPose"),
+            Map.entry("upward_salute", "StraightAnglePose"),
+            Map.entry("chair", "SquatPose"),
+            Map.entry("warrior_one", "LungePose"),
+            Map.entry("triangle", "TrianglePose"),
+            Map.entry("goddess", "GoddessSquatPose"),
+            Map.entry("tree", "TreePose"),
+            Map.entry("low_lunge", "LungePose"),
+            Map.entry("plank", "PlankPose"),
+            Map.entry("locust", "LocustPose"),
+            Map.entry("bridge", "BridgeYogaPose"),
+            Map.entry("seated_fold", "SeatedForwardBendPose"),
+            Map.entry("seated_twist", "TwistPose"),
+            Map.entry("head_to_knee", "LegStretchSittingPose"),
+            Map.entry("rest", "RestPose"));
 
     /** One icon: stroked sub-paths plus the head circles, all in the 24x24 box. */
     public record Icon(List<String> paths, List<Head> circles) { }

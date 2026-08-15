@@ -14,7 +14,17 @@ public final class PoseCatalog {
     private static final LazyConstant<List<Pose>> POSES = LazyConstant.of(PoseCatalog::buildPoses);
     private final List<Pose> poses = POSES.get();
     private static List<Pose> buildPoses() { return List.of(
+            pose("easy_seat", "Easy Seat", 60, "Sit comfortably, lengthen your spine, and let your breath settle.", "Sit on a folded blanket or a chair if your hips feel tight.", List.of()),
+            pose("seated_side_reach", "Seated Side Reach", 40, "Reach one arm overhead and lean gently to the side.", "Keep the reach small, or rest the other hand on your thigh.", List.of()),
             pose("mountain", "Mountain", 45, "Stand tall with feet comfortable and breathe steadily.", "Widen your stance or stand near a chair.", List.of()),
+            pose("upward_salute", "Upward Salute", 35, "Sweep both arms overhead and lengthen from your hips.", "Take the arms shoulder-width apart, or stop at shoulder height.", List.of()),
+            pose("standing_fold", "Standing Forward Fold", 40, "Hinge from the hips and let your head and arms hang heavy.", "Bend your knees generously or rest your hands on your shins.", List.of()),
+            pose("downward_dog", "Downward Dog", 45, "Press the floor away and lift your hips up and back.", "Bend your knees, or take the pose with hands on a chair seat.", List.of()),
+            pose("goddess", "Goddess", 40, "Step wide, turn your toes out, and bend both knees.", "Bend less deeply, or hold a chair back for support.", List.of()),
+            pose("plank", "Plank", 30, "Hold one long line from your heels to the crown of your head.", "Lower your knees to the floor and keep the same long line.", List.of()),
+            pose("locust", "Locust", 40, "Lying face down, lift your chest and legs a comfortable amount.", "Lift only the chest, or only the legs, and keep it small.", List.of()),
+            pose("seated_twist", "Seated Twist", 50, "Sit tall and turn gently from the middle of your spine.", "Turn only partway, or sit on a folded blanket.", List.of()),
+            pose("head_to_knee", "Head to Knee", 45, "Extend one leg, fold the other in, and hinge over the long leg.", "Bend the extended knee or loop a strap around the foot.", List.of()),
             pose("chair", "Chair", 40, "Sit your hips back as if reaching for a chair.", "Reduce the depth or touch a chair behind you.", List.of(knee("chair-knee", BilateralStrategy.WORST_MATCH, 80, 135, "Try a smaller knee bend and keep your knees tracking toward your toes."))),
             pose("warrior_one", "Warrior I", 45, "Step one foot back and lift through your chest.", "Shorten your stance and keep hands at hips.", List.of(knee("front-knee", BilateralStrategy.MOST_BENT, 80, 145, "Try bending your front knee gently toward your toes."))),
             pose("warrior_two", "Warrior II", 50, "Open your hips and arms while looking over the front hand.", "Shorten your stance if this feels uncomfortable.", List.of(knee("front-knee", BilateralStrategy.MOST_BENT, 80, 140, "Move your front knee slightly toward your toes."))),
