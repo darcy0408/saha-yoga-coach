@@ -398,9 +398,21 @@ public final class SahaApp extends Application {
     }
     private VBox stat(String label, String value) { var number = new Label(value); number.getStyleClass().add("stat-number"); var box = new VBox(7, new Label(label), number); box.getStyleClass().add("card"); HBox.setHgrow(box, Priority.ALWAYS); return box; }
 
-    private Pane createBodyView() { var pane = new Pane(); pane.setMinSize(420, 180); return pane; }
+    private LandmarkFrame lastDrawnFrame;
+    private Pane createBodyView() {
+        var pane = new Pane();
+        pane.setMinSize(420, 180);
+        // The calibration screen draws exactly once, before layout has sized the
+        // pane, so the figure lands at the 420x180 fallback scale. Redraw when the
+        // real size arrives. (The coach screen redraws every tick regardless.)
+        pane.widthProperty().addListener((ignored, oldValue, newValue) -> redrawLastFrame(pane));
+        pane.heightProperty().addListener((ignored, oldValue, newValue) -> redrawLastFrame(pane));
+        return pane;
+    }
+    private void redrawLastFrame(Pane pane) { if (pane == bodyView && lastDrawnFrame != null) drawFrame(lastDrawnFrame); }
     private void drawFrame(LandmarkFrame frame) {
         if (bodyView == null) return;
+        lastDrawnFrame = frame;
         bodyView.getChildren().clear();
         double w = Math.max(420, bodyView.getWidth()), h = Math.max(180, bodyView.getHeight());
         double scale = Math.min(w * .92, h * .82);
