@@ -47,8 +47,10 @@ Saha guides an approximately 20-minute beginner routine of 12 poses with
 warm-up, main sequence, and cooldown. During practice it:
 
 - shows structured instructions, modifications, and general cautions per pose,
-  alongside a license-verified reference illustration for poses whose artwork
-  has passed human review (CC0, checksum-pinned, credited in the app);
+  beside a license-verified reference figure drawn live from MIT-licensed
+  vector geometry in the interface's own ink, credited on screen — and says
+  plainly which poses have no verified figure instead of substituting a
+  near-miss;
 - converts anonymous body landmarks into 2D joint angles and checks them
   against pose-specific flexible ranges, on either lead side;
 - offers at most **two** supportive, observable cues at a time;
@@ -104,10 +106,10 @@ Java is not a wrapper here; it is the entire product:
 - **JavaFX 26** — onboarding, calibration, coaching, and progress screens.
 
 Supporting cast: OpenPnP OpenCV (local preview), ONNX Runtime (staged for
-Phase 2 inference), Jackson (derived-metric JSON), JUnit 5 (38 tests covering
+Phase 2 inference), Jackson (derived-metric JSON), JUnit 5 (42 tests covering
 geometry, confidence gating, cue limits, instruction-only truthfulness,
-bilateral rules, routine generation, personalization, persistence, and
-teaching-asset license checksums).
+bilateral rules, routine generation, personalization, persistence,
+teaching-asset license checksums, and pose-icon coverage).
 
 ### Privacy and safety by design
 
@@ -180,7 +182,7 @@ No purchases, accounts, API keys, or cloud services are required.
   (`JavaLanguageVersion.of(26)` by default) and applies `--enable-preview` to
   compile, test, and run tasks.
 - Verified on **Temurin 26.0.1** with **Gradle 9.4**; `gradlew.bat clean test`
-  passes 38 tests.
+  passes 42 tests.
 - Java 26 preview `LazyConstant` is exercised directly in
   `src/test/java/io/saha/yoga/routine/Java26LazyConstantTest.java`.
 
@@ -206,6 +208,9 @@ TODO (user): capture during the demo run —
 
 - Saha source: MIT. Dependencies: OpenJFX (GPLv2+CE), ONNX Runtime (MIT),
   OpenPnP OpenCV (BSD-3-Clause), Jackson (Apache-2.0), JUnit (EPL-2.0).
+- Teaching pose figures come from the Atlas Icons yoga pack by Ramy Wafaa /
+  Vectopus, MIT licensed; the licence text ships alongside the geometry in
+  `src/main/resources/io/saha/yoga/illustrations/atlas/`.
 - Two review-gallery illustrations are CC0 1.0 from OpenClipart
   (Gerald_G, files 8248/8249); attribution is not required by CC0 but is
   retained in `docs/third-party-assets.md` with checksums for transparency.

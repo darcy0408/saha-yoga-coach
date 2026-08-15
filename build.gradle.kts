@@ -41,6 +41,15 @@ tasks.test {
     jvmArgs("--enable-preview")
 }
 
+tasks.register<JavaExec>("iconGallerySnapshot") {
+    group = "verification"
+    description = "Renders every Atlas pose icon to build/review/icon-gallery.png"
+    classpath = sourceSets.main.get().runtimeClasspath
+    mainClass = "io.saha.yoga.illustration.IconGallerySnapshotLauncher"
+    args(layout.buildDirectory.file("review/icon-gallery.png").get().asFile.absolutePath)
+    jvmArgs("--enable-preview", "--enable-native-access=ALL-UNNAMED")
+}
+
 tasks.register<JavaExec>("teachingCardSnapshot") {
     group = "verification"
     description = "Renders the coaching teaching card, illustrated and written-only, to build/review/teaching-card.png"

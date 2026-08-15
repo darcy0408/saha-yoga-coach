@@ -6,6 +6,30 @@ work. Third-party artwork is isolated under
 `src/main/resources/io/saha/yoga/illustrations/cc0/` and is never presented as
 the camera's observed body.
 
+## Pose icons (primary teaching visual)
+
+| Asset | Source | License | Author |
+| --- | --- | --- | --- |
+| `illustrations/atlas/atlas-yoga.properties` | [Atlas Icons yoga pack](https://github.com/Vectopus/Atlas-icons-font) | [MIT](https://opensource.org/licenses/MIT) | Ramy Wafaa / Vectopus |
+
+The teaching card draws its figure from this pack: minimal uniform-stroke line
+poses that are stroked live by `PoseIconView` in the interface's own ink
+colour, so the figure scales cleanly and matches the surrounding design.
+Geometry is extracted from the pack's published vector source into a
+properties file rather than fetched at runtime; the pack's MIT licence text
+travels beside it in `LICENSE-atlas-icons.txt`.
+
+MIT permits redistribution and modification and does not require attribution,
+but the creator is credited on the teaching card anyway.
+
+Nine catalog poses have an icon. **Mountain, Warrior II and bird dog do not**:
+the pack's standing figures all raise or extend the arms, its wide-stance
+figure keeps both legs straight and so misses the bent front knee that defines
+Warrior II, and nothing in the pack extends an opposite arm and leg from all
+fours. Warrior II therefore falls back to the CC0 illustration below, and the
+other two keep written guidance. Warrior I and low lunge deliberately share
+one icon, because both poses are that same high-lunge shape.
+
 ## Retained review candidates
 
 | File | Pose | Creator and source | License | SHA-256 |
@@ -15,10 +39,9 @@ the camera's observed body.
 
 The artwork was uploaded November 13, 2007. Attribution is not required by
 CC0, but it is retained for contest transparency. Both files passed human
-review and are now **enabled for coaching**: they appear beside the written
-guidance on the teaching card for their own pose, credited with creator and
-license. Every other pose keeps written guidance only, because no audited
-asset depicts it.
+review and are **enabled for coaching**, and are used wherever the Atlas pack
+has no honest icon — in practice Warrior II, whose figure the icon pack cannot
+supply.
 
 ## Why the set is small
 

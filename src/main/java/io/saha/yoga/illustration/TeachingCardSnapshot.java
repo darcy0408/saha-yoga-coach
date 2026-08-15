@@ -31,13 +31,15 @@ import java.util.Objects;
 public final class TeachingCardSnapshot extends Application {
     @Override public void start(Stage stage) throws Exception {
         var catalog = new TeachingAssetCatalog();
-        var row = new HBox(20, card(catalog, "warrior_two", "Warrior II",
-                        "Bend the front knee over the ankle and open the arms."),
-                card(catalog, "chair", "Chair",
-                        "Sit the hips back and reach the arms alongside your ears."));
+        var row = new HBox(20, card(catalog, "chair", "Chair",
+                        "Sit the hips back, bend the knees, and keep the chest lifted."),
+                card(catalog, "warrior_two", "Warrior II",
+                        "Stack the front knee over the ankle and extend through both arms."),
+                card(catalog, "mountain", "Mountain",
+                        "Stand with a comfortable base and relaxed arms."));
         row.setPadding(new Insets(24));
         row.setStyle("-fx-background-color: #102523;");
-        var scene = new Scene(row, 1240, 340, Color.web("#102523"));
+        var scene = new Scene(row, 1840, 340, Color.web("#102523"));
         scene.getStylesheets().add(Objects.requireNonNull(getClass().getResource("/io/saha/yoga/saha.css")).toExternalForm());
         row.applyCss(); row.layout();
         var snapshot = row.snapshot(new SnapshotParameters(), null);
@@ -49,18 +51,28 @@ public final class TeachingCardSnapshot extends Application {
     }
 
     private VBox card(TeachingAssetCatalog catalog, String poseId, String displayName, String instruction) {
-        var asset = catalog.enabledForCoaching(poseId);
+        var icon = new PoseIconCatalog().forPose(poseId);
+        var asset = icon.isPresent() ? java.util.Optional.<TeachingAsset>empty() : catalog.enabledForCoaching(poseId);
         var heading = new Label("TEACHING GUIDE"); heading.getStyleClass().add("badge");
         var title = new Label(displayName); title.getStyleClass().add("teaching-pose-name");
         var text = new Label(instruction); text.setWrapText(true); text.setMinHeight(Region.USE_PREF_SIZE); text.getStyleClass().add("teaching-instruction");
-        var boundary = new Label(asset.isPresent()
-                ? "License-verified reference illustration (" + asset.get().licenseName() + ")"
+        boolean illustrated = icon.isPresent() || asset.isPresent();
+        var boundary = new Label(illustrated
+                ? "License-verified reference illustration"
                 : "Illustration under review. Follow the written setup or skip this pose.");
         boundary.setWrapText(true); boundary.setMinHeight(Region.USE_PREF_SIZE);
-        boundary.getStyleClass().add(asset.isPresent() ? "visual-approved" : "visual-review-warning");
+        boundary.getStyleClass().add(illustrated ? "visual-approved" : "visual-review-warning");
         var column = new VBox(10, title, text, boundary);
         HBox.setHgrow(column, Priority.ALWAYS);
         var body = new HBox(14, column);
+        icon.ifPresent(value -> {
+            var view = new PoseIconView();
+            view.show(value);
+            view.setMinSize(180, 180); view.setPrefSize(200, 200);
+            var credit = new Label(PoseIconCatalog.CREDIT); credit.getStyleClass().add("support-label");
+            var iconColumn = new VBox(4, view, credit); iconColumn.setAlignment(Pos.CENTER);
+            body.getChildren().add(iconColumn);
+        });
         asset.ifPresent(value -> {
             var stream = Objects.requireNonNull(getClass().getResourceAsStream(value.resourcePath()));
             var art = new ImageView(new Image(stream));

@@ -42,6 +42,7 @@ public final class SahaApp extends Application {
     private final LandmarkSource landmarks = new DemoLandmarkSource();
     private final PoseIllustrationRegistry illustrations = new PoseIllustrationRegistry();
     private final TeachingAssetCatalog teachingAssets = new TeachingAssetCatalog();
+    private final PoseIconCatalog poseIcons = new PoseIconCatalog();
     private final TeachingPoseDraftCatalog teachingDrafts = new TeachingPoseDraftCatalog();
     private final SessionStore store = new JsonSessionStore(Path.of(System.getProperty("user.home"), ".saha", "sessions.json"));
     private Stage stage;
@@ -329,24 +330,34 @@ public final class SahaApp extends Application {
         var heading = new Label("TEACHING GUIDE"); heading.getStyleClass().add("badge");
         var title = new Label(item.pose().displayName()); title.getStyleClass().add("teaching-pose-name");
         var instruction = new Label(item.pose().instructions().getFirst()); instruction.setWrapText(true); instruction.setMinHeight(Region.USE_PREF_SIZE); instruction.getStyleClass().add("teaching-instruction");
-        var asset = teachingAssets.enabledForCoaching(item.pose().id());
+        var icon = poseIcons.forPose(item.pose().id());
+        var asset = icon.isPresent() ? Optional.<TeachingAsset>empty() : teachingAssets.enabledForCoaching(item.pose().id());
+        boolean illustrated = icon.isPresent() || asset.isPresent();
         var status = illustrations.status(item.pose().id());
         var review = new Label(asset.map(TeachingAsset::reviewNote)
                 .orElseGet(() -> status.map(value -> value.requiredView() + " · visual " + value.reviewState().name().toLowerCase().replace('_', ' ')).orElse("Written guidance only · illustration not yet reviewed")));
         review.setWrapText(true); review.setMinHeight(Region.USE_PREF_SIZE); review.getStyleClass().add("teaching-review");
-        var boundary = new Label(asset.isPresent()
-                ? "License-verified reference illustration (" + asset.get().licenseName() + ")"
+        var boundary = new Label(illustrated
+                ? "License-verified reference illustration"
                 : "Illustration under review. Follow the written setup or skip this pose.");
-        boundary.setWrapText(true); boundary.setMinHeight(Region.USE_PREF_SIZE); boundary.getStyleClass().add(asset.isPresent() ? "visual-approved" : "visual-review-warning");
+        boundary.setWrapText(true); boundary.setMinHeight(Region.USE_PREF_SIZE); boundary.getStyleClass().add(illustrated ? "visual-approved" : "visual-review-warning");
         var support = new Label(status.map(value -> "On the floor: " + value.grounding().requiredContacts().stream().map(contact -> contact.name().toLowerCase().replace('_', ' ')).sorted().reduce((a, b) -> a + ", " + b).orElse("not defined")).orElse("Floor contact is still being defined."));
         support.setWrapText(true); support.setMinHeight(Region.USE_PREF_SIZE); support.getStyleClass().add("support-label");
         var text = new VBox(10, title, instruction, review, boundary, support);
         HBox.setHgrow(text, Priority.ALWAYS);
         var body = new HBox(14, text);
+        icon.ifPresent(value -> {
+            var view = new PoseIconView();
+            view.show(value);
+            view.setMinSize(180, 180); view.setPrefSize(200, 200);
+            var credit = new Label(PoseIconCatalog.CREDIT); credit.getStyleClass().add("support-label");
+            var iconColumn = new VBox(4, view, credit); iconColumn.setAlignment(Pos.CENTER);
+            body.getChildren().add(iconColumn);
+        });
         asset.ifPresent(value -> {
             var stream = Objects.requireNonNull(SahaApp.class.getResourceAsStream(value.resourcePath()));
             var art = new ImageView(new Image(stream));
-            art.setPreserveRatio(true); art.setFitWidth(220); art.setFitHeight(185);
+            art.setPreserveRatio(true); art.setFitWidth(200); art.setFitHeight(180);
             var artPane = new StackPane(art); artPane.getStyleClass().add("licensed-art-canvas");
             var credit = new Label("CC0 · " + value.creator()); credit.getStyleClass().add("support-label");
             var artColumn = new VBox(4, artPane, credit); artColumn.setAlignment(Pos.CENTER);
@@ -368,7 +379,8 @@ public final class SahaApp extends Application {
             var marker = new Label(i == itemIndex ? "YOU ARE HERE" : item.phase().toUpperCase()); marker.getStyleClass().add("path-marker");
             var name = new Label(item.pose().displayName()); name.setWrapText(true); name.getStyleClass().add("path-name");
             var duration = new Label(format(item.durationSeconds())); duration.getStyleClass().add("path-duration");
-            var visualStatus = new Label(teachingAssets.enabledForCoaching(item.pose().id()).isPresent() ? "REFERENCE VISUAL" : "WRITTEN GUIDE"); visualStatus.getStyleClass().add("path-visual-status");
+            var visualStatus = new Label(poseIcons.forPose(item.pose().id()).isPresent()
+                    || teachingAssets.enabledForCoaching(item.pose().id()).isPresent() ? "REFERENCE VISUAL" : "WRITTEN GUIDE"); visualStatus.getStyleClass().add("path-visual-status");
             var card = new VBox(2, marker, name, duration, visualStatus); card.getStyleClass().add("path-pose");
             if (i < itemIndex) card.getStyleClass().add("complete");
             if (i == itemIndex) card.getStyleClass().add("current");

@@ -17,6 +17,17 @@ because the judge path runs on deterministic demo landmarks.
 ## Recording checklist
 
 - Total length must land between 90 and 120 seconds — rehearse once with a timer.
+- Do **not** click "Try local camera preview" during the take: while the live
+  preview is active, practice runs in the preview branch with no analysis, no
+  confidence values, and no low-confidence pause. Demo mode is what shows the
+  coaching pipeline.
+- The injected low-confidence dip fires about 30 seconds after **Start Steady
+  Start** (10 low-confidence frames out of every 300 at 10 fps) and lasts about
+  one second. Do not skip poses before it arrives — a skip's five-second
+  transition can mask it, and the next dip is 30 seconds later. Move the mouse
+  near the Status line as it approaches so viewers' eyes are there.
+- **Delete all local history** genuinely deletes `~/.saha/sessions.json` —
+  capture the progress-page screenshot before clicking it.
 - 1080p screen capture, app window centered, no personal files visible.
 - The injected low-confidence pause occurs during normal demo playback; wait for it rather than cutting around it.
 - No third-party music (contest rules prohibit unlicensed copyrighted material).
