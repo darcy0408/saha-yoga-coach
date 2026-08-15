@@ -2,7 +2,10 @@
 
 Copy-paste source for the Hackster project post. Each section below maps to a
 field in Hackster's project editor. Deadline: **August 16, 2026, 11:59 PM PT**.
-Category targets: **Best Health Solution** and **Best in Show**.
+Category targets: **Best Home Solution** and **Best in Show** — Home is the
+deliberate pick: the category rewards AI-driven decision support and
+personalized recommendations at home, and it avoids competing with the
+entrant's other submissions (Health and Hobby are already occupied).
 
 ---
 
@@ -44,6 +47,9 @@ Saha guides an approximately 20-minute beginner routine of 12 poses with
 warm-up, main sequence, and cooldown. During practice it:
 
 - shows structured instructions, modifications, and general cautions per pose;
+- draws every pose as a minimal teaching figure generated live from the same
+  target landmarks the analyzer coaches against — the picture cannot drift
+  from the target the way hand-drawn illustrations can;
 - converts anonymous body landmarks into 2D joint angles and checks them
   against pose-specific flexible ranges, on either lead side;
 - offers at most **two** supportive, observable cues at a time;
@@ -99,9 +105,10 @@ Java is not a wrapper here; it is the entire product:
 - **JavaFX 26** — onboarding, calibration, coaching, and progress screens.
 
 Supporting cast: OpenPnP OpenCV (local preview), ONNX Runtime (staged for
-Phase 2 inference), Jackson (derived-metric JSON), JUnit 5 (37 tests covering
+Phase 2 inference), Jackson (derived-metric JSON), JUnit 5 (41 tests covering
 geometry, confidence gating, cue limits, instruction-only truthfulness,
-bilateral rules, routine generation, personalization, and persistence).
+bilateral rules, routine generation, personalization, persistence, and the
+generated pose-glyph figures).
 
 ### Privacy and safety by design
 
@@ -174,7 +181,7 @@ No purchases, accounts, API keys, or cloud services are required.
   (`JavaLanguageVersion.of(26)` by default) and applies `--enable-preview` to
   compile, test, and run tasks.
 - Verified on **Temurin 26.0.1** with **Gradle 9.4**; `gradlew.bat clean test`
-  passes 37 tests.
+  passes 41 tests.
 - Java 26 preview `LazyConstant` is exercised directly in
   `src/test/java/io/saha/yoga/routine/Java26LazyConstantTest.java`.
 
@@ -192,8 +199,10 @@ required 90–120 second window and needs no camera or person on screen.
 
 TODO (user): capture during the demo run —
 1. onboarding/consent screen, 2. calibration with preview and demo badge,
-3. coaching screen with cues and confidence, 4. low-confidence pause,
-5. progress page with the personalization reason.
+3. coaching screen with the generated pose glyph, cues, and confidence,
+4. low-confidence pause, 5. progress page with the personalization reason.
+Bonus: `gradlew.bat glyphGallerySnapshot` renders the full 12-pose glyph set
+to `build/review/glyph-gallery.png` — a strong story image.
 
 ## Attribution and licensing
 
