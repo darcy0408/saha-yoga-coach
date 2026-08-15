@@ -39,7 +39,10 @@ public final class SahaApp extends Application {
     private final PoseCatalog catalog = new PoseCatalog();
     private final RoutineGenerator generator = new RoutineGenerator(catalog);
     private final PoseAnalyzer analyzer = new PoseAnalyzer();
-    private final LandmarkSource landmarks = new DemoLandmarkSource();
+    private final DemoLandmarkSource demoSource = new DemoLandmarkSource();
+    /** Swapped to the camera source once a verified model is driving real landmarks. */
+    private LandmarkSource landmarks = demoSource;
+    private CameraLandmarkSource cameraSource;
     private final PoseIllustrationRegistry illustrations = new PoseIllustrationRegistry();
     private final TeachingAssetCatalog teachingAssets = new TeachingAssetCatalog();
     private final PoseIconCatalog poseIcons = new PoseIconCatalog();
@@ -54,6 +57,7 @@ public final class SahaApp extends Application {
     private Timeline clock;
     private Label poseLabel, phaseLabel, statusLabel, suggestionLabel, optionalLabel, confidenceLabel, timerLabel;
     private Pane bodyView;
+    private Pane landmarkOverlay;
     private VBox teachingView;
     private HBox practicePath;
     private ScrollPane practicePathScroll;
@@ -112,7 +116,8 @@ public final class SahaApp extends Application {
         var guide = new VBox(12, check("Place the camera around hip height."), check("Step back until your whole body fits."), check("Face a light source; avoid a bright window behind you."), check("Clear enough floor space to step in every direction.")); guide.getStyleClass().add("card");
         var preview = createBodyView(); bodyView = preview; preview.setPrefSize(560, 460);
         cameraPreview = new ImageView(); cameraPreview.setPreserveRatio(true); cameraPreview.setFitWidth(560); cameraPreview.setFitHeight(460); cameraPreview.setVisible(false);
-        var previewStack = new StackPane(preview, cameraPreview); previewStack.setPrefSize(560, 460); previewStack.setMaxSize(620, 520); previewStack.getStyleClass().add("camera");
+        landmarkOverlay = createOverlay();
+        var previewStack = new StackPane(preview, cameraPreview, landmarkOverlay); previewStack.setPrefSize(560, 460); previewStack.setMaxSize(620, 520); previewStack.getStyleClass().add("camera");
         var badge = new Label("DEMO COACHING · local camera preview optional"); badge.getStyleClass().add("badge");
         cameraStatus = new Label("No camera is opened unless you choose the preview below."); cameraStatus.setWrapText(true); cameraStatus.setMinHeight(Region.USE_PREF_SIZE);
         var note = new Label("Camera preview stays on this device and is never recorded. Until a verified ONNX pose model is installed, coaching continues with synthetic demonstration landmarks and does not claim to analyze the preview."); note.setWrapText(true);
@@ -130,6 +135,25 @@ public final class SahaApp extends Application {
         cameraStatus.getStyleClass().add("camera-status-active");
         cameraButton.setDisable(true);
         cameraButton.setText("Opening camera...");
+        var withModel = CameraLandmarkSource.ifModelPresent(deviceIndex);
+        if (withModel.isPresent()) {
+            cameraSource = withModel.get();
+            landmarks = cameraSource;
+            landmarks.selectPose(routine == null ? "easy_seat" : current().pose().id());
+            cameraSource.start(this::showCameraFrame,
+                    message -> Platform.runLater(() -> cameraStatus.setText(message)),
+                    message -> Platform.runLater(() -> {
+                        cameraPreview.setVisible(false);
+                        if (landmarkOverlay != null) landmarkOverlay.getChildren().clear();
+                        bodyView.setVisible(true);
+                        cameraStatus.setText(message + " Demo mode remains available.");
+                        cameraButton.setDisable(false);
+                        cameraButton.setText("Try camera again");
+                        restoreDemoSource();
+                    }));
+            startOpenTimeout();
+            return;
+        }
         cameraCapture = new OpenCvCameraCapture(deviceIndex);
         cameraCapture.start(this::showCameraFrame,
                 message -> Platform.runLater(() -> cameraStatus.setText(message)),
@@ -140,15 +164,26 @@ public final class SahaApp extends Application {
             cameraButton.setDisable(false);
             cameraButton.setText("Try camera again");
         }));
+        startOpenTimeout();
+    }
+
+    private void startOpenTimeout() {
         cameraOpenTimeout = new PauseTransition(Duration.seconds(8));
         cameraOpenTimeout.setOnFinished(e -> {
-            if (cameraCapture != null && !cameraCapture.isOpen()) {
+            boolean open = cameraSource != null ? cameraSource.isOpen() : cameraCapture != null && cameraCapture.isOpen();
+            if (!open) {
                 cameraStatus.setText("The camera is taking longer than expected to open. Check Settings > Privacy & security > Camera, close other camera apps, then try again.");
                 cameraButton.setDisable(false);
                 cameraButton.setText("Try camera again");
             }
         });
         cameraOpenTimeout.play();
+    }
+
+    private void restoreDemoSource() {
+        landmarks = demoSource;
+        cameraSource = null;
+        if (routine != null) demoSource.selectPose(current().pose().id());
     }
 
     private void showCameraFrame(CameraFrame frame) {
@@ -164,7 +199,10 @@ public final class SahaApp extends Application {
                 cameraPreview.setVisible(true);
                 bodyView.setVisible(false);
                 livePreviewActive = true;
-                cameraStatus.setText("Local preview active. Frames are transient and are not saved. Alignment analysis is still demo-only.");
+                if (cameraSource != null) drawCameraOverlay(landmarks.nextFrame(), latest.width());
+                cameraStatus.setText(cameraSource != null
+                        ? "Camera active. Your landmarks are estimated on this device, frame by frame; nothing is recorded or uploaded."
+                        : "Local preview active. Frames are transient and are not saved. Alignment analysis is still demo-only.");
                 cameraButton.setDisable(false);
                 cameraButton.setText("Restart camera preview");
             }
@@ -177,6 +215,9 @@ public final class SahaApp extends Application {
     private void stopCameraPreview() {
         if (cameraCapture != null) cameraCapture.close();
         cameraCapture = null;
+        if (cameraSource != null) cameraSource.close();
+        restoreDemoSource();
+        if (landmarkOverlay != null) landmarkOverlay.getChildren().clear();
         livePreviewActive = false;
         if (cameraOpenTimeout != null) cameraOpenTimeout.stop();
         cameraOpenTimeout = null;
@@ -236,7 +277,8 @@ public final class SahaApp extends Application {
         teachingView = new VBox(10); teachingView.setPrefSize(560, 270); teachingView.getStyleClass().add("teaching-view");
         bodyView = createBodyView(); bodyView.setPrefSize(560, 205);
         cameraPreview = new ImageView(); cameraPreview.setPreserveRatio(true); cameraPreview.setFitWidth(560); cameraPreview.setFitHeight(205); cameraPreview.setVisible(livePreviewActive);
-        var observationView = new StackPane(bodyView, cameraPreview); observationView.setPrefSize(560, 205); observationView.getStyleClass().add("camera-observation");
+        landmarkOverlay = createOverlay();
+        var observationView = new StackPane(bodyView, cameraPreview, landmarkOverlay); observationView.setPrefSize(560, 205); observationView.getStyleClass().add("camera-observation");
         bodyView.setVisible(!livePreviewActive);
         var stop = actionButton("Stop now"); stop.getStyleClass().add("danger"); stop.setOnAction(e -> finish(false));
         var pause = actionButton("Pause"); pause.setOnAction(e -> { paused = !paused; pause.setText(paused ? "Resume" : "Pause"); });
@@ -252,7 +294,9 @@ public final class SahaApp extends Application {
         controls.add(stop, 0, 2, 2, 1);
         var reasonText = wrapLabel(); reasonText.setMinHeight(Region.USE_PREF_SIZE); reasonText.setText(String.join(" ", routine.explanations()));
         var feedback = new VBox(10, phaseLabel, poseLabel, timerLabel, statusLabel, suggestionLabel, optionalLabel, confidenceLabel, new Separator(), new Label("Why this routine changed"), reasonText, controls); feedback.getStyleClass().add("card"); feedback.setPrefWidth(470); feedback.setMaxWidth(540);
-        var observationTitle = new Label(livePreviewActive
+        var observationTitle = new Label(cameraSource != null
+                ? "YOUR LANDMARKS · ESTIMATED ON THIS DEVICE"
+                : livePreviewActive
                 ? "LIVE CAMERA PREVIEW · ALIGNMENT NOT YET ANALYZED"
                 : "SYNTHETIC DEMO LANDMARKS · NOT AN EXAMPLE POSE"); observationTitle.getStyleClass().add("observation-title");
         var observation = new VBox(5, observationTitle, observationView); VBox.setVgrow(observationView, Priority.ALWAYS);
@@ -272,7 +316,7 @@ public final class SahaApp extends Application {
     private Button actionButton(String text) { var button = new Button(text); button.setMaxWidth(Double.MAX_VALUE); return button; }
     private RoutineItem current() { return routine.items().get(itemIndex); }
     private void tick() {
-        if (livePreviewActive) {
+        if (livePreviewActive && cameraSource == null) {
             statusLabel.setText("Status: Live preview — alignment not analyzed");
             suggestionLabel.setText("Guidance: Follow the written teaching guide. Saha can display your camera, but the pose model is not connected yet.");
             optionalLabel.setText("Optional adjustment: " + current().pose().modifications().getFirst());
@@ -281,7 +325,9 @@ public final class SahaApp extends Application {
             timerLabel.setText(format(remaining) + (paused ? " · paused" : ""));
             return;
         }
-        var frame = landmarks.nextFrame(); drawFrame(frame);
+        var frame = landmarks.nextFrame();
+        if (cameraSource != null) cameraSource.latestImage().ifPresent(image -> drawCameraOverlay(frame, image.width()));
+        else drawFrame(frame);
         if (landmarks.isTransitioning()) {
             statusLabel.setText("Status: Moving into " + current().pose().displayName());
             suggestionLabel.setText("Transition: " + landmarks.transitionGuidance());
@@ -323,6 +369,7 @@ public final class SahaApp extends Application {
         updateTeachingView(item);
         updatePracticePath();
         if (!livePreviewActive) drawFrame(landmarks.nextFrame());
+        confidenceLabel.setText(cameraSource != null ? "Camera: Active · your landmarks" : confidenceLabel.getText());
     }
     private void updateTeachingView(RoutineItem item) {
         if (teachingView == null) return;
@@ -412,6 +459,63 @@ public final class SahaApp extends Application {
     private VBox stat(String label, String value) { var number = new Label(value); number.getStyleClass().add("stat-number"); var box = new VBox(7, new Label(label), number); box.getStyleClass().add("card"); HBox.setHgrow(box, Priority.ALWAYS); return box; }
 
     private LandmarkFrame lastDrawnFrame;
+    /** Bones drawn over the live video; the same links the demo figure uses. */
+    private static final List<LandmarkName[]> LINKS = List.of(
+            new LandmarkName[]{LandmarkName.LEFT_SHOULDER,LandmarkName.RIGHT_SHOULDER},
+            new LandmarkName[]{LandmarkName.LEFT_HIP,LandmarkName.RIGHT_HIP},
+            new LandmarkName[]{LandmarkName.LEFT_SHOULDER,LandmarkName.LEFT_HIP},
+            new LandmarkName[]{LandmarkName.RIGHT_SHOULDER,LandmarkName.RIGHT_HIP},
+            new LandmarkName[]{LandmarkName.LEFT_SHOULDER,LandmarkName.LEFT_ELBOW},
+            new LandmarkName[]{LandmarkName.LEFT_ELBOW,LandmarkName.LEFT_WRIST},
+            new LandmarkName[]{LandmarkName.RIGHT_SHOULDER,LandmarkName.RIGHT_ELBOW},
+            new LandmarkName[]{LandmarkName.RIGHT_ELBOW,LandmarkName.RIGHT_WRIST},
+            new LandmarkName[]{LandmarkName.LEFT_HIP,LandmarkName.LEFT_KNEE},
+            new LandmarkName[]{LandmarkName.LEFT_KNEE,LandmarkName.LEFT_ANKLE},
+            new LandmarkName[]{LandmarkName.RIGHT_HIP,LandmarkName.RIGHT_KNEE},
+            new LandmarkName[]{LandmarkName.RIGHT_KNEE,LandmarkName.RIGHT_ANKLE});
+    /** Below this, a keypoint is a guess rather than an observation, so it is not drawn. */
+    private static final double DRAW_THRESHOLD = .30;
+
+    /**
+     * Draws the estimated joints over the video in the image's own space.
+     *
+     * Landmarks are normalized by the frame width on both axes, so one factor
+     * maps them onto the letterboxed image the view is showing; using the
+     * height for y would slide every point off the body on a non-square frame.
+     */
+    private void drawCameraOverlay(LandmarkFrame frame, int frameWidth) {
+        if (landmarkOverlay == null || cameraPreview.getImage() == null) return;
+        landmarkOverlay.getChildren().clear();
+        var bounds = cameraPreview.getBoundsInParent();
+        double shown = bounds.getWidth();
+        if (shown <= 0 || frameWidth <= 0) return;
+        double originX = bounds.getMinX(), originY = bounds.getMinY();
+        var points = frame.landmarks();
+        for (var link : LINKS) {
+            var a = points.get(link[0]);
+            var b = points.get(link[1]);
+            if (a == null || b == null || a.confidence() < DRAW_THRESHOLD || b.confidence() < DRAW_THRESHOLD) continue;
+            var bone = new Line(originX + a.x() * shown, originY + a.y() * shown,
+                    originX + b.x() * shown, originY + b.y() * shown);
+            bone.setStroke(Color.web("#8dd7c6"));
+            bone.setStrokeWidth(3);
+            landmarkOverlay.getChildren().add(bone);
+        }
+        points.forEach((name, mark) -> {
+            if (mark.confidence() < DRAW_THRESHOLD) return;
+            double radius = switch (name) { case LEFT_HAND, RIGHT_HAND, LEFT_TOE, RIGHT_TOE -> 3; default -> 5; };
+            var dot = new Circle(originX + mark.x() * shown, originY + mark.y() * shown, radius, Color.web("#f4c77a"));
+            landmarkOverlay.getChildren().add(dot);
+        });
+    }
+
+    private Pane createOverlay() {
+        var pane = new Pane();
+        pane.setMouseTransparent(true);
+        pane.setPickOnBounds(false);
+        return pane;
+    }
+
     private Pane createBodyView() {
         var pane = new Pane();
         pane.setMinSize(420, 180);

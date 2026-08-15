@@ -1,21 +1,28 @@
 # Pose model setup
 
-No model is bundled in this contest-safe baseline. Demo mode works immediately.
+Weights are not committed to git — they are large, and they are not ours.
+Saha runs in synthetic demo mode until the model is present, so the app and its
+tests work immediately after a clone.
 
-The planned adapter expects a verified MoveNet SinglePose Lightning ONNX model at:
+To enable real landmark estimation from your camera:
 
-```text
-models/movenet-singlepose-lightning.onnx
+```powershell
+.\scripts\fetch-model.ps1
 ```
 
-Before enabling it:
+That downloads MoveNet SinglePose Lightning (~9 MB, no account or API key) to
+`models/movenet-singlepose-lightning.onnx` and **verifies its SHA-256 against
+the artifact this project validated**. A mismatch stops the script: never
+download a similarly named community conversion and assume its tensors or
+license match.
 
-1. Record the authoritative download URL and redistribution license.
-2. Pin and verify SHA-256.
-3. Confirm input layout, size, RGB normalization, and output landmark ordering against the exporting project's documentation.
-4. Run synthetic and prerecorded fixture tests on JDK 26.
-5. Validate suppression at confidence below 0.70 and measure CPU latency.
-6. Add the hash and evaluation results to `docs/model-card.md`.
+Then run the app and enable the camera during setup:
 
-Never download a similarly named community conversion and assume its tensors or license match.
+```powershell
+.\gradlew.bat run
+```
 
+Provenance, tensor layout, keypoint mapping, confidence handling, and known
+limitations are recorded in [../docs/model-card.md](../docs/model-card.md).
+The fixture tests in `PoseEstimatorTest` exercise the real model through the
+production analysis boundary, and skip themselves when it is absent.
