@@ -16,7 +16,6 @@ public final class PoseCatalog {
     private static List<Pose> buildPoses() { return List.of(
             pose("easy_seat", "Easy Seat", 60, "Sit comfortably, lengthen your spine, and let your breath settle.", "Sit on a folded blanket or a chair if your hips feel tight.", List.of()),
             pose("seated_side_reach", "Seated Side Reach", 40, "Reach one arm overhead and lean gently to the side.", "Keep the reach small, or rest the other hand on your thigh.", List.of()),
-            pose("mountain", "Mountain", 45, "Stand tall with feet comfortable and breathe steadily.", "Widen your stance or stand near a chair.", List.of()),
             pose("upward_salute", "Upward Salute", 35, "Sweep both arms overhead and lengthen from your hips.", "Take the arms shoulder-width apart, or stop at shoulder height.", List.of()),
             pose("standing_fold", "Standing Forward Fold", 40, "Hinge from the hips and let your head and arms hang heavy.", "Bend your knees generously or rest your hands on your shins.", List.of()),
             pose("downward_dog", "Downward Dog", 45, "Press the floor away and lift your hips up and back.", "Bend your knees, or take the pose with hands on a chair seat.", List.of()),
@@ -31,7 +30,6 @@ public final class PoseCatalog {
             pose("triangle", "Triangle", 45, "Lengthen both sides of your waist as you reach over the front leg.", "Rest your hand higher on your shin or a chair.", List.of(knee("front-leg", BilateralStrategy.WORST_MATCH, 155, 180, "Consider softening or lengthening your front knee."))),
             pose("tree", "Tree", 40, "Balance on one leg with the lifted foot below or above the knee.", "Keep toes on the floor or hold a chair.", List.of(knee("standing-leg", BilateralStrategy.STRAIGHTEST, 155, 180, "Try keeping a soft, steady bend in your standing knee."))),
             pose("cat_cow", "Cat–Cow", 60, "On hands and knees, move your spine gently with your breath.", "Place padding under your knees or make the motion smaller.", List.of()),
-            pose("bird_dog", "Bird Dog", 45, "From hands and knees, reach opposite arm and leg long.", "Move only one limb or keep toes on the floor.", List.of()),
             pose("low_lunge", "Low Lunge", 50, "Step one foot forward and let your hips ease ahead.", "Pad the back knee and keep hands on blocks or thigh.", List.of(knee("front-knee", BilateralStrategy.MOST_BENT, 75, 130, "Try stacking your front knee more comfortably over your ankle."))),
             pose("bridge", "Bridge", 50, "Lie down, press through your feet, and lift your hips comfortably.", "Lift only a little or keep your hips down for pelvic tilts.", List.of()),
             pose("seated_fold", "Seated Forward Fold", 60, "Sit tall and hinge forward only as far as comfortable.", "Bend your knees or loop a strap around your feet.", List.of()),

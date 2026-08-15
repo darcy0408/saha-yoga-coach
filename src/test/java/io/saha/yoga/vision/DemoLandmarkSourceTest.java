@@ -9,11 +9,11 @@ import static org.junit.jupiter.api.Assertions.*;
 class DemoLandmarkSourceTest {
     @Test void changesBodyShapeWhenPoseChanges() {
         var source = new DemoLandmarkSource();
-        source.selectPose("mountain");
-        var mountainWrist = source.targetFrame().landmarks().get(LandmarkName.LEFT_WRIST);
+        source.selectPose("tree");
+        var treeWrist = source.targetFrame().landmarks().get(LandmarkName.LEFT_WRIST);
         source.selectPose("warrior_two");
         var warriorWrist = source.targetFrame().landmarks().get(LandmarkName.LEFT_WRIST);
-        assertNotEquals(mountainWrist, warriorWrist);
+        assertNotEquals(treeWrist, warriorWrist);
         assertTrue(source.isTransitioning());
     }
 
@@ -100,9 +100,9 @@ class DemoLandmarkSourceTest {
         assertTrue(fold.get(LandmarkName.LEFT_TOE).y() < fold.get(LandmarkName.LEFT_ANKLE).y(), "feet stay flexed toward the ceiling");
     }
 
-    @Test void mountainStandsOnBothFeet() {
+    @Test void upwardSaluteStandsOnBothFeet() {
         var source = new DemoLandmarkSource();
-        source.selectPose("mountain");
+        source.selectPose("upward_salute");
         var p = source.targetFrame().landmarks();
         assertEquals(LandmarkSource.FLOOR_Y, p.get(LandmarkName.LEFT_TOE).y(), .001, "left foot down");
         assertEquals(LandmarkSource.FLOOR_Y, p.get(LandmarkName.RIGHT_TOE).y(), .001, "right foot down");

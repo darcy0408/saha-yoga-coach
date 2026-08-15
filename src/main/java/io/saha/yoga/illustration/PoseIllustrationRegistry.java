@@ -13,7 +13,6 @@ public final class PoseIllustrationRegistry {
 
     public PoseIllustrationRegistry() {
         this(List.of(
-                draft("mountain", "Front view", "Stand with a comfortable base and relaxed arms.", SupportContact.LEFT_FOOT, SupportContact.RIGHT_FOOT),
                 draft("chair", "Side view", "Send the hips back, bend the knees, and keep the chest lifted.", SupportContact.LEFT_FOOT, SupportContact.RIGHT_FOOT),
                 draft("warrior_one", "Three-quarter view", "Bend the front knee into a clear lunge while grounding the rear foot.", SupportContact.LEFT_FOOT, SupportContact.RIGHT_FOOT),
                 draft("warrior_two", "Three-quarter view", "Stack the front knee over the ankle and extend through both arms.", SupportContact.LEFT_FOOT, SupportContact.RIGHT_FOOT),

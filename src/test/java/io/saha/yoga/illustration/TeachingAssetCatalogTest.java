@@ -36,6 +36,6 @@ class TeachingAssetCatalogTest {
         assertTrue(catalog.enabledForCoaching("warrior_two").isPresent());
         assertTrue(catalog.enabledForCoaching("tree").isPresent());
         assertTrue(catalog.enabledForCoaching("chair").isEmpty());
-        assertTrue(catalog.enabledForCoaching("mountain").isEmpty());
+        assertTrue(catalog.enabledForCoaching("plank").isEmpty());
     }
 }

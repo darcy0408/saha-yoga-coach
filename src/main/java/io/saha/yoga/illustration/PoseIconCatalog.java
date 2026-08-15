@@ -28,13 +28,11 @@ public final class PoseIconCatalog {
     public static final String CREDIT = "Atlas Icons · Ramy Wafaa · MIT";
     private static final String RESOURCE = "/io/saha/yoga/illustrations/atlas/atlas-yoga.properties";
 
-    // Mapped only where the drawn figure really is that asana. Deliberately
-    // absent: mountain (the pack's standing figures all raise or extend the
-    // arms), warrior_two (its wide-stance figure keeps both legs straight, so
-    // it misses the bent front knee that defines the pose), and bird dog
-    // (nothing in the pack extends an opposite arm and leg from all fours).
-    // Warrior I and low lunge share one icon because both are that same high
-    // lunge shape.
+    // Mapped only where the drawn figure really is that asana. Warrior II is
+    // the one catalog pose without an icon - the pack's wide-stance figure
+    // keeps both legs straight, missing the bent front knee that defines the
+    // pose - so it falls back to the audited CC0 illustration. Warrior I and
+    // low lunge share one icon because both are that same high lunge shape.
     private static final Map<String, String> ICON_BY_POSE = Map.ofEntries(
             Map.entry("easy_seat", "SeatedPose"),
             Map.entry("seated_side_reach", "SittingArmRaisePose"),

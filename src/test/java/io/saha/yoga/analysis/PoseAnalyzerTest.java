@@ -22,8 +22,8 @@ class PoseAnalyzerTest {
 
     @Test void poseWithoutRulesIsExplicitlyInstructionOnly() {
         var source = new DemoLandmarkSource();
-        source.selectPose("mountain");
-        var result = new PoseAnalyzer().analyze(new PoseCatalog().require("mountain"), source.targetFrame());
+        source.selectPose("easy_seat");
+        var result = new PoseAnalyzer().analyze(new PoseCatalog().require("easy_seat"), source.targetFrame());
         var instruction = assertInstanceOf(AnalysisResult.InstructionOnly.class, result);
         assertTrue(instruction.guidance().contains("not available"));
     }

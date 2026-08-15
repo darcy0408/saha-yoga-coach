@@ -7,7 +7,7 @@ import java.util.Map;
 
 public final class DemoLandmarkSource implements LandmarkSource {
     private long frame;
-    private String poseId = "mountain";
+    private String poseId = "easy_seat";
     private EnumMap<LandmarkName, Landmark> displayed;
     private EnumMap<LandmarkName, Landmark> transitionFrom;
     private EnumMap<LandmarkName, Landmark> transitionWaypoint;
@@ -48,8 +48,7 @@ public final class DemoLandmarkSource implements LandmarkSource {
             case "warrior_two" -> warriorTwo(points);
             case "triangle" -> triangle(points);
             case "tree" -> tree(points);
-            case "cat_cow" -> tabletop(points, false);
-            case "bird_dog" -> tabletop(points, true);
+            case "cat_cow" -> tabletop(points);
             case "low_lunge" -> lowLunge(points);
             case "bridge" -> bridge(points);
             case "seated_fold" -> seatedFold(points);
@@ -104,7 +103,7 @@ public final class DemoLandmarkSource implements LandmarkSource {
     public LandmarkFrame targetFrame() { return new LandmarkFrame(Instant.now(), target == null ? build(poseId) : target); }
     private FaceDirection facingFor(String id) { return switch(id) {
         case "warrior_two" -> FaceDirection.LEFT;
-        case "cat_cow", "bird_dog", "downward_dog", "plank", "standing_fold" -> FaceDirection.DOWN;
+        case "cat_cow", "downward_dog", "plank", "standing_fold" -> FaceDirection.DOWN;
         case "triangle" -> FaceDirection.UP;
         case "chair" -> FaceDirection.RIGHT;
         case "seated_fold", "head_to_knee" -> FaceDirection.RIGHT;
@@ -118,7 +117,7 @@ public final class DemoLandmarkSource implements LandmarkSource {
     @Override public double spineBend() { return poseId.equals("cat_cow") ? Math.sin(System.nanoTime()/1_200_000_000.0)*.075 : 0; }
     private boolean crossesFloorBoundary(String from,String to) { return isFloor(from)!=isFloor(to); }
     private boolean isFloor(String id) { return switch(id){
-        case "cat_cow","bird_dog","bridge","seated_fold","rest","easy_seat","seated_side_reach","seated_twist",
+        case "cat_cow","bridge","seated_fold","rest","easy_seat","seated_side_reach","seated_twist",
              "head_to_knee","downward_dog","plank","locust" -> true;
         default -> false;}; }
     private EnumMap<LandmarkName, Landmark> forwardFold() {
@@ -180,19 +179,12 @@ public final class DemoLandmarkSource implements LandmarkSource {
         arms(p,.30,.12,.42,.01,.70,.12,.58,.01); hips(p,.46,.48,.54,.48);
         legs(p,.47,.69,.47,.88,.68,.62,.50,.57); toes(p,.53,.89,.52,.64);
     }
-    private void tabletop(EnumMap<LandmarkName, Landmark> p, boolean extended) {
+    private void tabletop(EnumMap<LandmarkName, Landmark> p) {
         at(p,LandmarkName.NOSE,.23,.40); shoulders(p,.34,.45,.36,.48); hips(p,.58,.45,.60,.48);
-        if (extended) {
-            arms(p,.23,.41,.11,.38,.36,.62,.36,.79);
-            at(p,LandmarkName.LEFT_HAND,.05,.36); at(p,LandmarkName.RIGHT_HAND,.30,.79);
-            legs(p,.58,.62,.58,.79,.71,.41,.84,.37);
-            toes(p,.64,.79,.91,.35);
-        } else {
-            arms(p,.34,.62,.34,.79,.37,.65,.37,.82);
-            at(p,LandmarkName.LEFT_HAND,.28,.79); at(p,LandmarkName.RIGHT_HAND,.31,.82);
-            legs(p,.58,.62,.58,.79,.61,.65,.61,.82);
-            toes(p,.65,.80,.68,.82);
-        }
+        arms(p,.34,.62,.34,.79,.37,.65,.37,.82);
+        at(p,LandmarkName.LEFT_HAND,.28,.79); at(p,LandmarkName.RIGHT_HAND,.31,.82);
+        legs(p,.58,.62,.58,.79,.61,.65,.61,.82);
+        toes(p,.65,.80,.68,.82);
     }
     private void lowLunge(EnumMap<LandmarkName, Landmark> p) {
         // Anjaneyasana, facing left: hips sunk to knee height, front shin

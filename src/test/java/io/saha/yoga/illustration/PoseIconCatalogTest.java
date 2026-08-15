@@ -30,24 +30,22 @@ class PoseIconCatalogTest {
     }
 
     @Test void posesWithoutAnHonestMatchStayUnillustrated() {
-        // the pack has no bent-knee wide stance, no plain standing figure and
-        // nothing on all fours with a limb extended, so these must not be
-        // silently mapped to a near-miss
-        for (var pose : Set.of("mountain", "warrior_two", "bird_dog")) {
-            assertTrue(catalog.forPose(pose).isEmpty(), pose + " should have no icon");
-        }
+        // the pack has no bent-knee wide stance, so Warrior II must not be
+        // silently mapped to its straight-legged near-miss
+        assertTrue(catalog.forPose("warrior_two").isEmpty(), "warrior_two should have no icon");
     }
 
     @Test void unknownPoseHasNoIcon() {
         assertTrue(catalog.forPose("handstand").isEmpty());
     }
 
-    @Test void almostEveryRoutinePoseCanBeIllustrated() {
-        var poses = new PoseCatalog().all();
-        var unillustrated = poses.stream().map(pose -> pose.id()).filter(id -> catalog.forPose(id).isEmpty()).toList();
-        // Warrior II falls back to the audited CC0 illustration; mountain and
-        // bird dog have no honest match anywhere and stay written-only.
-        assertEquals(Set.of("mountain", "warrior_two", "bird_dog"), Set.copyOf(unillustrated),
-                "an unexpected pose lost its figure");
+    @Test void everyRoutinePoseHasAFigure() {
+        var unillustrated = new PoseCatalog().all().stream().map(pose -> pose.id())
+                .filter(id -> catalog.forPose(id).isEmpty()).toList();
+        // Warrior II is the sole exception and falls back to the audited CC0
+        // illustration, so every pose in the practice shows a figure.
+        assertEquals(Set.of("warrior_two"), Set.copyOf(unillustrated), "an unexpected pose lost its figure");
+        assertTrue(new TeachingAssetCatalog().enabledForCoaching("warrior_two").isPresent(),
+                "warrior_two must keep its fallback illustration");
     }
 }

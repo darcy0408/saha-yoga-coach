@@ -20,24 +20,24 @@ public final class RoutineGenerator {
      */
     private static final List<String> ORDER = List.of(
             "easy_seat", "seated_side_reach",
-            "cat_cow", "bird_dog", "downward_dog", "standing_fold",
-            "upward_salute", "mountain", "chair", "warrior_one", "warrior_two", "triangle", "goddess",
+            "cat_cow", "downward_dog", "standing_fold",
+            "upward_salute", "chair", "warrior_one", "warrior_two", "triangle", "goddess",
             "tree",
             "low_lunge", "plank", "locust", "bridge",
             "seated_fold", "seated_twist", "head_to_knee",
             "rest");
     private static final Map<String, Integer> DURATIONS = Map.ofEntries(
-            Map.entry("easy_seat",60), Map.entry("seated_side_reach",40),
-            Map.entry("cat_cow",70), Map.entry("bird_dog",50), Map.entry("downward_dog",45), Map.entry("standing_fold",40),
-            Map.entry("upward_salute",35), Map.entry("mountain",35), Map.entry("chair",45), Map.entry("warrior_one",50),
-            Map.entry("warrior_two",50), Map.entry("triangle",45), Map.entry("goddess",40),
-            Map.entry("tree",50),
-            Map.entry("low_lunge",50), Map.entry("plank",30), Map.entry("locust",40), Map.entry("bridge",50),
-            Map.entry("seated_fold",60), Map.entry("seated_twist",50), Map.entry("head_to_knee",45),
-            Map.entry("rest",150));
+            Map.entry("easy_seat",65), Map.entry("seated_side_reach",40),
+            Map.entry("cat_cow",80), Map.entry("downward_dog",50), Map.entry("standing_fold",40),
+            Map.entry("upward_salute",35), Map.entry("chair",50), Map.entry("warrior_one",55),
+            Map.entry("warrior_two",55), Map.entry("triangle",50), Map.entry("goddess",45),
+            Map.entry("tree",55),
+            Map.entry("low_lunge",55), Map.entry("plank",30), Map.entry("locust",45), Map.entry("bridge",55),
+            Map.entry("seated_fold",65), Map.entry("seated_twist",55), Map.entry("head_to_knee",50),
+            Map.entry("rest",160));
     /** Where each phase begins, by index into {@link #ORDER}. */
     private static final Map<Integer, String> PHASE_STARTS = Map.of(
-            0, "Centering", 2, "Warm-up", 6, "Standing", 13, "Balance", 14, "Floor work", 18, "Cooldown", 21, "Rest");
+            0, "Centering", 2, "Warm-up", 5, "Standing", 11, "Balance", 12, "Floor work", 16, "Cooldown", 19, "Rest");
     private final PoseCatalog catalog;
     public RoutineGenerator(PoseCatalog catalog) { this.catalog = catalog; }
     public Routine beginner(Map<String, Integer> adjustments, List<String> explanations) {

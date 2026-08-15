@@ -35,8 +35,8 @@ public final class TeachingCardSnapshot extends Application {
                         "Sit the hips back, bend the knees, and keep the chest lifted."),
                 card(catalog, "warrior_two", "Warrior II",
                         "Stack the front knee over the ankle and extend through both arms."),
-                card(catalog, "mountain", "Mountain",
-                        "Stand with a comfortable base and relaxed arms."));
+                card(catalog, "downward_dog", "Downward Dog",
+                        "Press the floor away and lift your hips up and back."));
         row.setPadding(new Insets(24));
         row.setStyle("-fx-background-color: #102523;");
         var scene = new Scene(row, 1840, 340, Color.web("#102523"));

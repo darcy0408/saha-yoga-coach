@@ -22,13 +22,15 @@ travels beside it in `LICENSE-atlas-icons.txt`.
 MIT permits redistribution and modification and does not require attribution,
 but the creator is credited on the teaching card anyway.
 
-Nine catalog poses have an icon. **Mountain, Warrior II and bird dog do not**:
-the pack's standing figures all raise or extend the arms, its wide-stance
-figure keeps both legs straight and so misses the bent front knee that defines
-Warrior II, and nothing in the pack extends an opposite arm and leg from all
-fours. Warrior II therefore falls back to the CC0 illustration below, and the
-other two keep written guidance. Warrior I and low lunge deliberately share
-one icon, because both poses are that same high-lunge shape.
+Every pose in the practice has a figure except **Warrior II**: the pack's
+wide-stance figure keeps both legs straight and so misses the bent front knee
+that defines the pose, so Warrior II falls back to the CC0 illustration below.
+Warrior I and low lunge deliberately share one icon, because both poses are
+that same high-lunge shape.
+
+Mountain and bird dog were removed from the practice entirely on August 15,
+2026 rather than carried without a matching figure — no available artwork
+depicted either one in a style that flowed with the rest.
 
 ## Retained review candidates
 
