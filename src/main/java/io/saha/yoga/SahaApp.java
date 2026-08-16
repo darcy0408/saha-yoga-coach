@@ -343,7 +343,7 @@ public final class SahaApp extends Application {
                 statusLabel.setText("Status: " + r.status());
                 suggestionLabel.setText("Primary suggestion: " + (r.suggestions().isEmpty() ? "Keep breathing comfortably." : r.suggestions().getFirst()));
                 optionalLabel.setText("Optional adjustment: " + current().pose().modifications().getFirst());
-                confidenceLabel.setText("Confidence: " + level(r.confidence()));
+                confidenceLabel.setText("Confidence: " + level(r.confidence()) + reading(r.confidence()));
             }
             case AnalysisResult.InstructionOnly instruction -> {
                 statusLabel.setText("Status: Instruction only — alignment not measured");
@@ -353,13 +353,16 @@ public final class SahaApp extends Application {
             }
             case AnalysisResult.Unreliable u -> {
                 statusLabel.setText("Status: Camera view needs attention"); suggestionLabel.setText("Primary suggestion: " + u.guidance());
-                optionalLabel.setText("Corrections are paused until the view improves."); confidenceLabel.setText("Confidence: Low");
+                optionalLabel.setText("Corrections are paused until the view improves.");
+                confidenceLabel.setText("Confidence: " + level(u.confidence()) + reading(u.confidence()));
             }
         }
         if (!paused && mayTime && ++clockTicks % 10 == 0 && --remaining <= 0) advance(false);
         timerLabel.setText(format(remaining) + (paused || !mayTime ? " · paused" : ""));
     }
     private String level(double value) { return value >= .85 ? "High" : value >= .70 ? "Medium" : "Low"; }
+    /** The measured number alongside the word, so a pause can be diagnosed rather than guessed at. */
+    private String reading(double value) { return cameraSource == null ? "" : " (%.2f, needs %.2f)".formatted(value, PoseAnalyzer.RELIABILITY_THRESHOLD); }
     private String format(int seconds) { return "%d:%02d".formatted(seconds / 60, seconds % 60); }
     private void updatePose() {
         var item = current();

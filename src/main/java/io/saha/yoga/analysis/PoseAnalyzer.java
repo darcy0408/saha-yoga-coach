@@ -2,13 +2,19 @@ package io.saha.yoga.analysis;
 
 import io.saha.yoga.domain.*;
 import java.util.Comparator;
+import java.util.LinkedHashSet;
+import java.util.List;
 
 public final class PoseAnalyzer {
     public static final double RELIABILITY_THRESHOLD = 0.70;
+    /** Enough to know a person is present and upright. */
+    private static final List<LandmarkName> CORE = List.of(LandmarkName.LEFT_SHOULDER, LandmarkName.RIGHT_SHOULDER,
+            LandmarkName.LEFT_HIP, LandmarkName.RIGHT_HIP);
+
     public AnalysisResult analyze(Pose pose, LandmarkFrame frame) {
-        double confidence = frame.minimumConfidence(pose.requiredLandmarks());
+        double confidence = visibility(pose, frame);
         if (confidence < RELIABILITY_THRESHOLD) {
-            return new AnalysisResult.Unreliable("Step back so your full body is visible, and check the lighting.", confidence);
+            return new AnalysisResult.Unreliable(framingHint(pose, frame), confidence);
         }
         if (pose.alignmentRules().isEmpty()) {
             return new AnalysisResult.InstructionOnly(
@@ -25,6 +31,61 @@ public final class PoseAnalyzer {
         String status = misses.isEmpty() ? "Steady — keep breathing" : "Almost aligned";
         return new AnalysisResult.Reliable(status, misses, confidence);
     }
+    /**
+     * How well the camera can see what this pose actually needs.
+     *
+     * A pose is not blocked by a joint it never measures: a seated pose with no
+     * alignment rules only needs to see a torso, so feet outside the frame stop
+     * mattering. Where a rule does apply, either side satisfies it, because the
+     * rules already evaluate both sides and choose one — demanding both would
+     * refuse to coach anyone standing side-on to the camera, which is exactly
+     * how most of these poses are best viewed.
+     */
+    private double visibility(Pose pose, LandmarkFrame frame) {
+        double core = frame.minimumConfidence(CORE);
+        if (pose.alignmentRules().isEmpty()) return core;
+        double measurable = 1;
+        for (var rule : pose.alignmentRules()) {
+            double left = frame.minimumConfidence(List.of(rule.first(), rule.vertex(), rule.third()));
+            double right = frame.minimumConfidence(List.of(mirror(rule.first()), mirror(rule.vertex()), mirror(rule.third())));
+            measurable = Math.min(measurable, Math.max(left, right));
+        }
+        return Math.min(core, measurable);
+    }
+
+    /** Names the body parts the camera cannot see, rather than guessing at the cause. */
+    private String framingHint(Pose pose, LandmarkFrame frame) {
+        var needed = new LinkedHashSet<>(CORE);
+        for (var rule : pose.alignmentRules()) {
+            needed.add(rule.first()); needed.add(rule.vertex()); needed.add(rule.third());
+            needed.add(mirror(rule.first())); needed.add(mirror(rule.vertex())); needed.add(mirror(rule.third()));
+        }
+        var weak = needed.stream()
+                .filter(name -> {
+                    var point = frame.landmarks().get(name);
+                    return point == null || point.confidence() < RELIABILITY_THRESHOLD;
+                })
+                .map(PoseAnalyzer::readable)
+                .distinct()
+                .toList();
+        if (weak.isEmpty()) return "Hold still for a moment so the view can settle.";
+        String parts = weak.size() == 1 ? weak.getFirst()
+                : String.join(", ", weak.subList(0, weak.size() - 1)) + " and " + weak.getLast();
+        return "Your " + parts + " are out of view. Step back or tilt the camera until your whole body fits, then this resumes on its own.";
+    }
+
+    private static String readable(LandmarkName name) {
+        return switch (name) {
+            case LEFT_SHOULDER, RIGHT_SHOULDER -> "shoulders";
+            case LEFT_ELBOW, RIGHT_ELBOW -> "elbows";
+            case LEFT_WRIST, RIGHT_WRIST, LEFT_HAND, RIGHT_HAND -> "hands";
+            case LEFT_HIP, RIGHT_HIP -> "hips";
+            case LEFT_KNEE, RIGHT_KNEE -> "knees";
+            case LEFT_ANKLE, RIGHT_ANKLE, LEFT_TOE, RIGHT_TOE -> "feet";
+            case NOSE -> "head";
+        };
+    }
+
     private double select(AlignmentRule rule, double primary, double mirrored) {
         return switch (rule.bilateralStrategy()) {
             case FIXED_SIDE -> primary;
