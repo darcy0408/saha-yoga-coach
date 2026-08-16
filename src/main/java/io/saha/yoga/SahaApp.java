@@ -73,7 +73,7 @@ public final class SahaApp extends Application {
     private int clockTicks;
     private boolean paused;
     private Timeline clock;
-    private Label poseLabel, phaseLabel, statusLabel, suggestionLabel, optionalLabel, confidenceLabel, timerLabel;
+    private Label poseLabel, phaseLabel, statusLabel, suggestionLabel, optionalLabel, confidenceLabel, timerLabel, measurementLabel;
     private Pane bodyView;
     private Pane landmarkOverlay;
     private VBox teachingView;
@@ -294,6 +294,7 @@ public final class SahaApp extends Application {
     private void showCoach() {
         poseLabel = new Label(); poseLabel.setWrapText(true); poseLabel.setMinHeight(Region.USE_PREF_SIZE); poseLabel.getStyleClass().add("hero-small"); phaseLabel = new Label(); phaseLabel.getStyleClass().add("badge");
         statusLabel = wrapLabel(); statusLabel.getStyleClass().add("status"); suggestionLabel = wrapLabel(); optionalLabel = wrapLabel(); confidenceLabel = wrapLabel(); timerLabel = new Label(); timerLabel.getStyleClass().add("timer");
+        measurementLabel = wrapLabel(); measurementLabel.getStyleClass().add("measurement");
         teachingView = new VBox(10); teachingView.setPrefSize(560, 190); teachingView.setMinHeight(170); teachingView.setMaxHeight(210); teachingView.getStyleClass().add("teaching-view");
         bodyView = createBodyView(); bodyView.setPrefSize(560, 420);
         cameraPreview = new ImageView(); cameraPreview.setPreserveRatio(true); cameraPreview.setVisible(livePreviewActive);
@@ -335,7 +336,7 @@ public final class SahaApp extends Application {
         controls.add(speech, 0, 2); controls.add(tint, 1, 2);
         controls.add(stop, 0, 3, 2, 1);
         var reasonText = wrapLabel(); reasonText.setMinHeight(Region.USE_PREF_SIZE); reasonText.setText(String.join(" ", routine.explanations()));
-        var feedback = new VBox(10, phaseLabel, poseLabel, timerLabel, statusLabel, suggestionLabel, optionalLabel, confidenceLabel, new Separator(), new Label("Why this routine changed"), reasonText, controls); feedback.getStyleClass().add("card"); feedback.setPrefWidth(400); feedback.setMaxWidth(430);
+        var feedback = new VBox(10, phaseLabel, poseLabel, timerLabel, statusLabel, measurementLabel, suggestionLabel, optionalLabel, confidenceLabel, new Separator(), new Label("Why this routine changed"), reasonText, controls); feedback.getStyleClass().add("card"); feedback.setPrefWidth(400); feedback.setMaxWidth(430);
         var observationTitle = new Label(cameraSource != null
                 ? "YOUR LANDMARKS · ESTIMATED ON THIS DEVICE"
                 : livePreviewActive
@@ -385,12 +386,14 @@ public final class SahaApp extends Application {
                 statusLabel.setText("Status: " + r.status());
                 suggestionLabel.setText("Primary suggestion: " + (r.suggestions().isEmpty() ? "Keep breathing comfortably." : r.suggestions().getFirst()));
                 spoken.framingResolved();
+                measurementLabel.setText(readMeasurements(r));
                 if (!r.suggestions().isEmpty()) spoken.cue(r.suggestions().getFirst()).ifPresent(voice::say);
                 optionalLabel.setText("Optional adjustment: " + current().pose().modifications().getFirst());
                 confidenceLabel.setText("Confidence: " + level(r.confidence()) + reading(r.confidence()));
             }
             case AnalysisResult.InstructionOnly instruction -> {
                 spoken.framingResolved();
+                measurementLabel.setText("");
                 statusLabel.setText("Status: Instruction only — alignment not measured");
                 suggestionLabel.setText("Guidance: " + instruction.guidance());
                 optionalLabel.setText("Optional adjustment: " + current().pose().modifications().getFirst());
@@ -398,6 +401,7 @@ public final class SahaApp extends Application {
             }
             case AnalysisResult.Unreliable u -> {
                 statusLabel.setText("Status: Camera view needs attention"); suggestionLabel.setText("Primary suggestion: " + u.guidance());
+                measurementLabel.setText("");
                 optionalLabel.setText("Corrections are paused until the view improves.");
                 confidenceLabel.setText("Confidence: " + level(u.confidence()) + reading(u.confidence()));
                 spoken.framing(u.guidance()).ifPresent(voice::say);
@@ -406,6 +410,22 @@ public final class SahaApp extends Application {
         if (!paused && mayTime && ++clockTicks % 10 == 0 && --remaining <= 0) advance(false);
         timerLabel.setText(format(remaining) + (paused || !mayTime ? " · paused" : ""));
     }
+    /**
+     * The angles measured this frame, with their targets.
+     *
+     * Showing the live number is the clearest answer to "is it actually seeing
+     * me?" — it moves as you move. An ungraded measurement shows its value with
+     * no verdict, because for a shape like cat–cow no single value is right.
+     */
+    private String readMeasurements(AnalysisResult.Reliable result) {
+        if (result.measurements().isEmpty()) return "";
+        return result.measurements().stream()
+                .map(m -> m.graded()
+                        ? "%s %.0f° %s target %.0f–%.0f°".formatted(m.label(), m.degrees(), m.inRange() ? "✓" : "·", m.minimum(), m.maximum())
+                        : "%s %.0f° · watching".formatted(m.label(), m.degrees()))
+                .reduce((a, b) -> a + "\n" + b).orElse("");
+    }
+
     private String speechLabel() {
         if (!speechWanted) return "Spoken guidance: off";
         return voice.isAvailable() ? "Spoken guidance: on" : "Spoken guidance unavailable";

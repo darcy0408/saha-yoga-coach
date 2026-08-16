@@ -225,8 +225,10 @@ public final class DemoLandmarkSource implements LandmarkSource {
         hips(p,.38,.86,.40,.88); legs(p,.60,.90,.80,.92,.48,.94,.56,.90); toes(p,.85,.86,.60,.94);
     }
     private void upwardSalute(EnumMap<LandmarkName, Landmark> p) {
-        // standing tall, both arms sweeping overhead
-        at(p,LandmarkName.NOSE,.50,.10); shoulders(p,.44,.21,.56,.21); arms(p,.40,.10,.46,.00,.60,.10,.54,.00);
+        // standing tall, both arms sweeping overhead and nearly straight - the
+        // elbow and wrist continue the shoulder's line so the reference honours
+        // the straight-arm rule this pose carries
+        at(p,LandmarkName.NOSE,.50,.10); shoulders(p,.44,.21,.56,.21); arms(p,.42,.07,.40,-.08,.58,.07,.60,-.08);
         hips(p,.46,.48,.54,.48); legs(p,.46,.70,.45,.88,.54,.70,.55,.88); toes(p,.45,.96,.55,.96);
     }
     private void standingFold(EnumMap<LandmarkName, Landmark> p) {

@@ -37,16 +37,25 @@ public final class PoseAnalyzer {
             return new AnalysisResult.InstructionOnly(
                     "Follow the written setup. Camera alignment checks are not available for this pose yet.", confidence);
         }
-        var misses = pose.alignmentRules().stream().map(rule -> {
+        var evaluations = pose.alignmentRules().stream().map(rule -> {
             var points = frame.landmarks();
             var primary = Geometry.angleDegrees(points.get(rule.first()), points.get(rule.vertex()), points.get(rule.third()));
             var mirrored = Geometry.angleDegrees(points.get(mirror(rule.first())), points.get(mirror(rule.vertex())), points.get(mirror(rule.third())));
-            var angle = select(rule, primary, mirrored);
-            return new Evaluation(rule, angle);
-        }).filter(e -> e.angle < e.rule.minimumDegrees() || e.angle > e.rule.maximumDegrees())
+            return new Evaluation(rule, select(rule, primary, mirrored));
+        }).toList();
+        var measurements = evaluations.stream()
+                .map(e -> new AnalysisResult.Measurement(e.rule.label(), e.angle,
+                        e.rule.minimumDegrees(), e.rule.maximumDegrees(), e.rule.graded()))
+                .toList();
+        var misses = evaluations.stream()
+                .filter(e -> e.rule.graded())
+                .filter(e -> e.angle < e.rule.minimumDegrees() || e.angle > e.rule.maximumDegrees())
                 .sorted(Comparator.comparingInt(e -> e.rule.priority())).limit(2).map(e -> e.rule.suggestion()).toList();
-        String status = misses.isEmpty() ? "Steady — keep breathing" : "Almost aligned";
-        return new AnalysisResult.Reliable(status, misses, confidence);
+        boolean anyGraded = evaluations.stream().anyMatch(e -> e.rule.graded());
+        String status = !misses.isEmpty() ? "Almost aligned"
+                : anyGraded ? "Aligned — hold and breathe"
+                : "Watching — no target for this shape";
+        return new AnalysisResult.Reliable(status, misses, confidence, measurements);
     }
     /**
      * How well the camera can see what this pose actually needs.

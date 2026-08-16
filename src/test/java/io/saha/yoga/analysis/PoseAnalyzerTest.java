@@ -42,7 +42,14 @@ class PoseAnalyzerTest {
             } else {
                 var reliable = assertInstanceOf(AnalysisResult.Reliable.class, result, pose.id());
                 assertTrue(reliable.suggestions().isEmpty(), () -> pose.id() + " contradicts its reference: " + reliable.suggestions());
-                assertEquals("Steady — keep breathing", reliable.status(), pose.id());
+                assertFalse(reliable.status().startsWith("Almost"), pose.id() + " should not report a miss against its own reference");
+                assertEquals(pose.alignmentRules().size(), reliable.measurements().size(),
+                        pose.id() + " should report every angle it measured");
+                // an ungraded measurement is shown but never ticked, so a shape
+                // with no correct value cannot be reported as correct
+                reliable.measurements().forEach(m -> {
+                    if (!m.graded()) assertFalse(m.inRange(), pose.id() + " " + m.label() + " must not claim a verdict");
+                });
             }
         }
     }

@@ -22,6 +22,7 @@
 .field-label { -fx-font-weight: 700; }
 .status { -fx-font-size: 20px; -fx-font-weight: 700; }
 .timer { -fx-font-size: 28px; -fx-text-fill: #f0c77e; }
+.measurement { -fx-font-family: "Consolas", "Menlo", monospace; -fx-font-size: 14px; -fx-text-fill: #8dd7c6; }
 .stat-number { -fx-font-size: 28px; -fx-font-weight: 700; -fx-text-fill: #8dd7c6; }
 .text-field, .combo-box, .slider { -fx-font-size: 15px; }
 .check-box { -fx-text-fill: #ffffff; }
