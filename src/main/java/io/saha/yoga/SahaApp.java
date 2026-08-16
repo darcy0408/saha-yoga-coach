@@ -47,6 +47,16 @@ public final class SahaApp extends Application {
     private boolean speechWanted = true;
     /** Show the camera as a mirror, which is what people expect of a self view. */
     private boolean mirrorPreview = true;
+    /**
+     * Swap red and blue in the preview.
+     *
+     * Not a bug being preserved: the colours reaching the view are correct, and
+     * this deliberately trades them for the cooler cast the entrant preferred
+     * while practising. The frames handed to the model are untouched, so
+     * nothing about the estimate changes with this setting.
+     */
+    private boolean stylizedColour = true;
+    private byte[] tintScratch;
     private final DemoLandmarkSource demoSource = new DemoLandmarkSource();
     /** Swapped to the camera source once a verified model is driving real landmarks. */
     private LandmarkSource landmarks = demoSource;
@@ -203,7 +213,7 @@ public final class SahaApp extends Application {
             if (cameraPreview != null && latest != null) {
                 var image = new WritableImage(latest.width(), latest.height());
                 image.getPixelWriter().setPixels(0, 0, latest.width(), latest.height(),
-                        PixelFormat.getByteBgraInstance(), latest.bgra(), 0, latest.width() * 4);
+                        PixelFormat.getByteBgraInstance(), forDisplay(latest), 0, latest.width() * 4);
                 cameraPreview.setImage(image);
                 cameraPreview.setVisible(true);
                 bodyView.setVisible(false);
@@ -304,6 +314,11 @@ public final class SahaApp extends Application {
         });
         var easier = actionButton("Easier option"); easier.setOnAction(e -> optionalLabel.setText("Optional adjustment: " + current().pose().modifications().getFirst()));
         var next = actionButton("Next pose"); next.getStyleClass().add("next"); next.setOnAction(e -> advance(true));
+        var tint = actionButton(stylizedColour ? "Camera colour: cool" : "Camera colour: true");
+        tint.setOnAction(e -> {
+            stylizedColour = !stylizedColour;
+            tint.setText(stylizedColour ? "Camera colour: cool" : "Camera colour: true");
+        });
         var speech = actionButton(speechLabel());
         speech.setOnAction(e -> {
             speechWanted = !speechWanted;
@@ -317,7 +332,7 @@ public final class SahaApp extends Application {
         controls.getColumnConstraints().addAll(leftColumn, rightColumn);
         controls.add(pause, 0, 0); controls.add(repeat, 1, 0);
         controls.add(easier, 0, 1); controls.add(next, 1, 1);
-        controls.add(speech, 0, 2, 2, 1);
+        controls.add(speech, 0, 2); controls.add(tint, 1, 2);
         controls.add(stop, 0, 3, 2, 1);
         var reasonText = wrapLabel(); reasonText.setMinHeight(Region.USE_PREF_SIZE); reasonText.setText(String.join(" ", routine.explanations()));
         var feedback = new VBox(10, phaseLabel, poseLabel, timerLabel, statusLabel, suggestionLabel, optionalLabel, confidenceLabel, new Separator(), new Label("Why this routine changed"), reasonText, controls); feedback.getStyleClass().add("card"); feedback.setPrefWidth(400); feedback.setMaxWidth(430);
@@ -562,6 +577,20 @@ public final class SahaApp extends Application {
      */
     private double screenX(double normalizedX, double originX, double shown) {
         return mirrorPreview ? originX + shown - normalizedX * shown : originX + normalizedX * shown;
+    }
+
+    /** The pixels to show, tinted or not. Reuses one buffer so this costs nothing per frame. */
+    private byte[] forDisplay(CameraFrame frame) {
+        var source = frame.bgra();
+        if (!stylizedColour) return source;
+        if (tintScratch == null || tintScratch.length != source.length) tintScratch = new byte[source.length];
+        for (int i = 0; i + 3 < source.length; i += 4) {
+            tintScratch[i] = source[i + 2];
+            tintScratch[i + 1] = source[i + 1];
+            tintScratch[i + 2] = source[i];
+            tintScratch[i + 3] = source[i + 3];
+        }
+        return tintScratch;
     }
 
     private Pane createOverlay() {

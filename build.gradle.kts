@@ -41,6 +41,14 @@ tasks.test {
     jvmArgs("--enable-preview")
 }
 
+tasks.register<JavaExec>("colourCheck") {
+    group = "verification"
+    description = "Prints how the preview pipeline interprets known pixel bytes"
+    classpath = sourceSets.main.get().runtimeClasspath
+    mainClass = "io.saha.yoga.vision.ColourCheckLauncher"
+    jvmArgs("--enable-preview", "--enable-native-access=ALL-UNNAMED")
+}
+
 tasks.register<JavaExec>("routineSnapshot") {
     group = "verification"
     description = "Renders the generated practice in order to build/review/routine.png"
