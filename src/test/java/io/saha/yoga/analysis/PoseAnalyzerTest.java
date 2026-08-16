@@ -16,7 +16,10 @@ class PoseAnalyzerTest {
     }
     @Test void lowConfidenceSuppressesCorrections() {
         var pose = new PoseCatalog().require("chair"); var map = new EnumMap<LandmarkName, Landmark>(LandmarkName.class);
-        pose.requiredLandmarks().forEach(n -> map.put(n, new Landmark(.5, .5, .4)));
+        // spread the points so a failure here means the confidence gate let
+        // this through, not that the geometry rejected a degenerate triangle
+        double y = .2;
+        for (var name : LandmarkName.values()) map.put(name, new Landmark(.4 + (y += .02), y, .15));
         assertInstanceOf(AnalysisResult.Unreliable.class, new PoseAnalyzer().analyze(pose, new LandmarkFrame(Instant.now(), map)));
     }
 

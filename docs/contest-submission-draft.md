@@ -57,7 +57,7 @@ practice it:
 - offers at most **two** supportive, observable cues at a time, and can **speak
   them aloud** through the operating system's own local voice, because nobody
   can read a screen from inside a forward fold;
-- pauses the pose timer whenever landmark confidence drops below 0.70 instead
+- pauses the pose timer whenever landmark confidence drops below the confidence gate instead
   of guessing;
 - provides pause, repeat, skip, an easier option, and an always-visible
   immediate-stop control;
@@ -66,15 +66,15 @@ practice it:
   everything on request.
 
 A 1–5 intensity control transparently scales hold times without introducing
-advanced poses. An opt-in OpenCV camera preview helps with framing during
-calibration and practice; frames are transient, never analyzed, stored, or
-uploaded in this build.
+advanced poses. The opt-in camera estimates your landmarks with MoveNet on this
+machine and draws them over a mirrored preview, so you can see what the coach
+sees; frames are analysed and discarded, never written to disk or uploaded.
 
 ### Honesty as an architectural property
 
 The analysis pipeline returns one of three sealed result types:
 
-- `Reliable` — every required landmark cleared the 0.70 confidence gate, so
+- `Reliable` — every required landmark cleared the confidence gate, so
   measured feedback is allowed;
 - `InstructionOnly` — the pose has no implemented geometric rules, so the UI
   says "instruction only" rather than implying alignment was checked;
@@ -83,12 +83,15 @@ The analysis pipeline returns one of three sealed result types:
 
 Because the hierarchy is sealed and every consumer pattern-matches
 exhaustively, "unmeasured pose accidentally praised as aligned" is a compile
-error, not a bug class. The same honesty extends to the demo: this build's
-coaching runs on deterministic synthetic landmarks through the production
-analysis boundary, and the UI labels it as such. Live MoveNet inference stays
-disabled until a model artifact passes provenance, license, checksum, tensor,
-and fixture validation — that gate is documented in the repo rather than
-quietly skipped.
+error, not a bug class.
+
+The same honesty governs the model. MoveNet runs only when an artifact has
+passed provenance, license and checksum validation — the fetch script refuses
+a file whose SHA-256 does not match — and without it the app falls back to
+synthetic landmarks and says so on screen rather than pretending to see you.
+Poses whose geometry has not been validated carry no alignment rules and report
+as instruction-only, and a landmark below the drawing threshold is never
+painted onto the video, so a guess cannot masquerade as an observation.
 
 ### Modern Java 26, doing all the work
 
@@ -108,11 +111,12 @@ Java is not a wrapper here; it is the entire product:
   event queue.
 - **JavaFX 26** — onboarding, calibration, coaching, and progress screens.
 
-Supporting cast: OpenPnP OpenCV (local preview), ONNX Runtime (staged for
-Phase 2 inference), Jackson (derived-metric JSON), JUnit 5 (42 tests covering
-geometry, confidence gating, cue limits, instruction-only truthfulness,
-bilateral rules, routine generation, personalization, persistence,
-teaching-asset license checksums, and pose-icon coverage).
+Supporting cast: OpenPnP OpenCV (local capture), ONNX Runtime (MoveNet
+inference), Jackson (derived-metric JSON), JUnit 5 (62 tests covering geometry,
+confidence gating, cue limits, instruction-only truthfulness, bilateral rules,
+routine generation and ordering, personalization, persistence, teaching-asset
+license checksums, pose-icon coverage, spoken-cue pacing, and the real model
+through the production analysis boundary).
 
 ### Privacy and safety by design
 
@@ -131,10 +135,11 @@ requires no camera at all.
 
 ### What's next
 
-Validate and ship a licensed MoveNet ONNX artifact, connect the existing
-preview to live landmarks across diverse users and environments, then add
-local speech and a full accessibility audit. The gate is deliberate: the coach
-earns live inference only when the model's provenance and behavior are proven.
+Validate the measured poses on camera against people actually holding them,
+across varied bodies, rooms and lighting, and widen the rule set beyond knee
+angles once that evidence exists. Then a full accessibility audit, and floor
+poses — the weakest case for a single-camera model — earning measurement rather
+than being handed it.
 
 ---
 
@@ -185,7 +190,7 @@ No purchases, accounts, API keys, or cloud services are required.
   (`JavaLanguageVersion.of(26)` by default) and applies `--enable-preview` to
   compile, test, and run tasks.
 - Verified on **Temurin 26.0.1** with **Gradle 9.4**; `gradlew.bat clean test`
-  passes 42 tests.
+  passes 62 tests.
 - Java 26 preview `LazyConstant` is exercised directly in
   `src/test/java/io/saha/yoga/routine/Java26LazyConstantTest.java`.
 

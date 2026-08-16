@@ -6,7 +6,15 @@ import java.util.LinkedHashSet;
 import java.util.List;
 
 public final class PoseAnalyzer {
-    public static final double RELIABILITY_THRESHOLD = 0.70;
+    /**
+     * The confidence a landmark must reach before its geometry is trusted.
+     *
+     * MoveNet scores a clearly visible joint in the 0.3-0.7 band, not near 1,
+     * so the old 0.70 gate refused to coach a person standing plainly in frame
+     * and reported their shoulders as out of view. This is the value validated
+     * against a real body in the sibling project this model came from.
+     */
+    public static final double RELIABILITY_THRESHOLD = 0.35;
     /** Enough to know a person is present and upright. */
     private static final List<LandmarkName> CORE = List.of(LandmarkName.LEFT_SHOULDER, LandmarkName.RIGHT_SHOULDER,
             LandmarkName.LEFT_HIP, LandmarkName.RIGHT_HIP);
@@ -67,6 +75,7 @@ public final class PoseAnalyzer {
                 })
                 .map(PoseAnalyzer::readable)
                 .distinct()
+                .sorted()
                 .toList();
         if (weak.isEmpty()) return "Hold still for a moment so the view can settle.";
         String parts = weak.size() == 1 ? weak.getFirst()

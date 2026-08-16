@@ -45,6 +45,8 @@ public final class SahaApp extends Application {
     private final SpokenCoach spoken = new SpokenCoach();
     private Voice voice = Voice.silent();
     private boolean speechWanted = true;
+    /** Show the camera as a mirror, which is what people expect of a self view. */
+    private boolean mirrorPreview = true;
     private final DemoLandmarkSource demoSource = new DemoLandmarkSource();
     /** Swapped to the camera source once a verified model is driving real landmarks. */
     private LandmarkSource landmarks = demoSource;
@@ -122,6 +124,7 @@ public final class SahaApp extends Application {
         var guide = new VBox(12, check("Place the camera around hip height."), check("Step back until your whole body fits."), check("Face a light source; avoid a bright window behind you."), check("Clear enough floor space to step in every direction.")); guide.getStyleClass().add("card");
         var preview = createBodyView(); bodyView = preview; preview.setPrefSize(560, 460);
         cameraPreview = new ImageView(); cameraPreview.setPreserveRatio(true); cameraPreview.setFitWidth(560); cameraPreview.setFitHeight(460); cameraPreview.setVisible(false);
+        cameraPreview.setScaleX(mirrorPreview ? -1 : 1);
         landmarkOverlay = createOverlay();
         var previewStack = new StackPane(preview, cameraPreview, landmarkOverlay); previewStack.setPrefSize(560, 460); previewStack.setMaxSize(620, 520); previewStack.getStyleClass().add("camera");
         var badge = new Label("DEMO COACHING · local camera preview optional"); badge.getStyleClass().add("badge");
@@ -281,11 +284,17 @@ public final class SahaApp extends Application {
     private void showCoach() {
         poseLabel = new Label(); poseLabel.setWrapText(true); poseLabel.setMinHeight(Region.USE_PREF_SIZE); poseLabel.getStyleClass().add("hero-small"); phaseLabel = new Label(); phaseLabel.getStyleClass().add("badge");
         statusLabel = wrapLabel(); statusLabel.getStyleClass().add("status"); suggestionLabel = wrapLabel(); optionalLabel = wrapLabel(); confidenceLabel = wrapLabel(); timerLabel = new Label(); timerLabel.getStyleClass().add("timer");
-        teachingView = new VBox(10); teachingView.setPrefSize(560, 270); teachingView.getStyleClass().add("teaching-view");
-        bodyView = createBodyView(); bodyView.setPrefSize(560, 205);
-        cameraPreview = new ImageView(); cameraPreview.setPreserveRatio(true); cameraPreview.setFitWidth(560); cameraPreview.setFitHeight(205); cameraPreview.setVisible(livePreviewActive);
+        teachingView = new VBox(10); teachingView.setPrefSize(560, 190); teachingView.setMinHeight(170); teachingView.setMaxHeight(210); teachingView.getStyleClass().add("teaching-view");
+        bodyView = createBodyView(); bodyView.setPrefSize(560, 420);
+        cameraPreview = new ImageView(); cameraPreview.setPreserveRatio(true); cameraPreview.setVisible(livePreviewActive);
+        cameraPreview.setScaleX(mirrorPreview ? -1 : 1);
         landmarkOverlay = createOverlay();
-        var observationView = new StackPane(bodyView, cameraPreview, landmarkOverlay); observationView.setPrefSize(560, 205); observationView.getStyleClass().add("camera-observation");
+        var observationView = new StackPane(bodyView, cameraPreview, landmarkOverlay);
+        observationView.setPrefSize(560, 420); observationView.setMinHeight(260); observationView.getStyleClass().add("camera-observation");
+        // the video is the point once the camera is on, so let it take the room
+        // the window has rather than sitting in a fixed letterbox
+        cameraPreview.fitWidthProperty().bind(observationView.widthProperty().subtract(12));
+        cameraPreview.fitHeightProperty().bind(observationView.heightProperty().subtract(12));
         bodyView.setVisible(!livePreviewActive);
         var stop = actionButton("Stop now"); stop.getStyleClass().add("danger"); stop.setOnAction(e -> finish(false));
         var pause = actionButton("Pause"); pause.setOnAction(e -> { paused = !paused; pause.setText(paused ? "Resume" : "Pause"); });
@@ -311,14 +320,14 @@ public final class SahaApp extends Application {
         controls.add(speech, 0, 2, 2, 1);
         controls.add(stop, 0, 3, 2, 1);
         var reasonText = wrapLabel(); reasonText.setMinHeight(Region.USE_PREF_SIZE); reasonText.setText(String.join(" ", routine.explanations()));
-        var feedback = new VBox(10, phaseLabel, poseLabel, timerLabel, statusLabel, suggestionLabel, optionalLabel, confidenceLabel, new Separator(), new Label("Why this routine changed"), reasonText, controls); feedback.getStyleClass().add("card"); feedback.setPrefWidth(470); feedback.setMaxWidth(540);
+        var feedback = new VBox(10, phaseLabel, poseLabel, timerLabel, statusLabel, suggestionLabel, optionalLabel, confidenceLabel, new Separator(), new Label("Why this routine changed"), reasonText, controls); feedback.getStyleClass().add("card"); feedback.setPrefWidth(400); feedback.setMaxWidth(430);
         var observationTitle = new Label(cameraSource != null
                 ? "YOUR LANDMARKS · ESTIMATED ON THIS DEVICE"
                 : livePreviewActive
                 ? "LIVE CAMERA PREVIEW · ALIGNMENT NOT YET ANALYZED"
                 : "SYNTHETIC DEMO LANDMARKS · NOT AN EXAMPLE POSE"); observationTitle.getStyleClass().add("observation-title");
         var observation = new VBox(5, observationTitle, observationView); VBox.setVgrow(observationView, Priority.ALWAYS);
-        var visualColumn = new VBox(12, teachingView, observation); VBox.setVgrow(teachingView, Priority.ALWAYS); VBox.setVgrow(observation, Priority.ALWAYS);
+        var visualColumn = new VBox(12, teachingView, observation); VBox.setVgrow(teachingView, Priority.NEVER); VBox.setVgrow(observation, Priority.ALWAYS);
         var coach = new BorderPane(visualColumn, null, feedback, null, null); BorderPane.setMargin(feedback, new Insets(0, 0, 0, 25));
         practicePath = new HBox(8); practicePath.setAlignment(Pos.CENTER_LEFT);
         practicePathScroll = new ScrollPane(practicePath); practicePathScroll.setFitToHeight(true); practicePathScroll.setPannable(true); practicePathScroll.setHbarPolicy(ScrollPane.ScrollBarPolicy.AS_NEEDED); practicePathScroll.setVbarPolicy(ScrollPane.ScrollBarPolicy.NEVER); practicePathScroll.getStyleClass().add("practice-path-scroll");
@@ -360,11 +369,13 @@ public final class SahaApp extends Application {
             case AnalysisResult.Reliable r -> {
                 statusLabel.setText("Status: " + r.status());
                 suggestionLabel.setText("Primary suggestion: " + (r.suggestions().isEmpty() ? "Keep breathing comfortably." : r.suggestions().getFirst()));
+                spoken.framingResolved();
                 if (!r.suggestions().isEmpty()) spoken.cue(r.suggestions().getFirst()).ifPresent(voice::say);
                 optionalLabel.setText("Optional adjustment: " + current().pose().modifications().getFirst());
                 confidenceLabel.setText("Confidence: " + level(r.confidence()) + reading(r.confidence()));
             }
             case AnalysisResult.InstructionOnly instruction -> {
+                spoken.framingResolved();
                 statusLabel.setText("Status: Instruction only — alignment not measured");
                 suggestionLabel.setText("Guidance: " + instruction.guidance());
                 optionalLabel.setText("Optional adjustment: " + current().pose().modifications().getFirst());
@@ -374,7 +385,7 @@ public final class SahaApp extends Application {
                 statusLabel.setText("Status: Camera view needs attention"); suggestionLabel.setText("Primary suggestion: " + u.guidance());
                 optionalLabel.setText("Corrections are paused until the view improves.");
                 confidenceLabel.setText("Confidence: " + level(u.confidence()) + reading(u.confidence()));
-                spoken.cue(u.guidance()).ifPresent(voice::say);
+                spoken.framing(u.guidance()).ifPresent(voice::say);
             }
         }
         if (!paused && mayTime && ++clockTicks % 10 == 0 && --remaining <= 0) advance(false);
@@ -528,8 +539,8 @@ public final class SahaApp extends Application {
             var a = points.get(link[0]);
             var b = points.get(link[1]);
             if (a == null || b == null || a.confidence() < DRAW_THRESHOLD || b.confidence() < DRAW_THRESHOLD) continue;
-            var bone = new Line(originX + a.x() * shown, originY + a.y() * shown,
-                    originX + b.x() * shown, originY + b.y() * shown);
+            var bone = new Line(screenX(a.x(), originX, shown), originY + a.y() * shown,
+                    screenX(b.x(), originX, shown), originY + b.y() * shown);
             bone.setStroke(Color.web("#8dd7c6"));
             bone.setStrokeWidth(3);
             landmarkOverlay.getChildren().add(bone);
@@ -537,9 +548,20 @@ public final class SahaApp extends Application {
         points.forEach((name, mark) -> {
             if (mark.confidence() < DRAW_THRESHOLD) return;
             double radius = switch (name) { case LEFT_HAND, RIGHT_HAND, LEFT_TOE, RIGHT_TOE -> 3; default -> 5; };
-            var dot = new Circle(originX + mark.x() * shown, originY + mark.y() * shown, radius, Color.web("#f4c77a"));
+            var dot = new Circle(screenX(mark.x(), originX, shown), originY + mark.y() * shown, radius, Color.web("#f4c77a"));
             landmarkOverlay.getChildren().add(dot);
         });
+    }
+
+    /**
+     * Maps a landmark's x onto the screen, mirrored.
+     *
+     * The preview is flipped so it behaves like a mirror: lift the arm on your
+     * left and the figure's left arm lifts with it. The landmarks themselves
+     * stay in true camera space, so nothing downstream has to know.
+     */
+    private double screenX(double normalizedX, double originX, double shown) {
+        return mirrorPreview ? originX + shown - normalizedX * shown : originX + normalizedX * shown;
     }
 
     private Pane createOverlay() {

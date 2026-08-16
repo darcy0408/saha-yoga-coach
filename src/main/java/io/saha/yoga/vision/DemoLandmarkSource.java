@@ -153,7 +153,8 @@ public final class DemoLandmarkSource implements LandmarkSource {
     private Landmark midpoint(Landmark a,Landmark b){return new Landmark((a.x()+b.x())/2,(a.y()+b.y())/2,confidence());}
     private Landmark extend(Landmark from,Landmark toward,double distance){double dx=toward.x()-from.x(),dy=toward.y()-from.y(),length=Math.max(.001,Math.hypot(dx,dy));return new Landmark(from.x()+dx/length*distance,from.y()+dy/length*distance,confidence());}
     private Landmark withConfidence(Landmark p){return new Landmark(p.x(),p.y(),confidence());}
-    private double confidence(){return frame%300>=290?.55:.94;}
+    // the deliberate dip that demonstrates the pause must sit below the gate
+    private double confidence(){return frame%300>=290?.18:.94;}
     private void standing(EnumMap<LandmarkName, Landmark> p) {
         at(p, LandmarkName.NOSE,.50,.10); shoulders(p,.42,.21,.58,.21); arms(p,.40,.40,.39,.58,.60,.40,.61,.58);
         hips(p,.46,.48,.54,.48); legs(p,.46,.70,.45,.88,.54,.70,.55,.88); toes(p,.45,.96,.55,.96);

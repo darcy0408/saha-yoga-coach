@@ -4,7 +4,7 @@
 
 Saha uses ports between capture, landmark inference, analysis, coaching, routines, and storage. `LandmarkSource` is the only input the analysis pipeline needs. `DemoLandmarkSource` currently supplies deterministic normalized coordinates. `OpenCvCameraCapture` provides an opt-in, non-recording calibration preview on a background virtual thread; the JavaFX side coalesces frames so capture cannot flood its event queue. A future live landmark adapter will add resize/input normalization, ONNX Runtime inference, and MoveNet output decoding without leaking frames beyond that boundary.
 
-`PoseAnalyzer` first finds the minimum confidence of every required landmark. Below 0.70 it returns the sealed `Unreliable` result, which contains framing guidance but cannot contain corrective suggestions. Reliable frames evaluate 2D joint angles against pose-specific ranges. Rules are prioritized and capped at two. Timing consumes only reliable frames.
+`PoseAnalyzer` first finds the minimum confidence of every required landmark. Below 0.35 it returns the sealed `Unreliable` result, which contains framing guidance but cannot contain corrective suggestions. Reliable frames evaluate 2D joint angles against pose-specific ranges. Rules are prioritized and capped at two. Timing consumes only reliable frames.
 
 `RoutineGenerator` creates a 1,150-second beginner sequence. `PersonalizationEngine` consumes derived `SessionMetric` records and produces duration deltas plus user-facing reasons. `JsonSessionStore` is the only persistent component.
 

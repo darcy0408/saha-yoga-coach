@@ -37,7 +37,7 @@ and silently corrupt every joint angle the coach measures.
 
 ## Confidence and suppression
 
-Per-landmark confidence flows from the model into the existing 0.70 gate
+Per-landmark confidence flows from the model into the existing confidence gate
 unchanged. Below it the analyzer returns `Unreliable`, which by construction
 cannot carry corrective suggestions, and the pose timer pauses. Landmarks below
 0.30 are not drawn at all, so a guess never appears on screen as an

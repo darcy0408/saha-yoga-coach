@@ -4,7 +4,7 @@ Saha is a Java 26 desktop application that guides an approximately 20-minute yog
 
 ## Competition relevance
 
-Built for Hackster.io's **Modern Java in the Wild**, Saha targets Best Health Solution and Best in Show. Java owns the UI, routine engine, landmark geometry, coaching policy, personalization, and local persistence. The memorable judge path works without special hardware through deterministic demonstration landmarks.
+Built for Hackster.io's **Modern Java in the Wild**, Saha targets Best Home Solution and Best in Show. Java owns the UI, routine engine, landmark geometry, coaching policy, personalization, and local persistence. The memorable judge path works without special hardware through deterministic demonstration landmarks.
 
 ## The problem
 
@@ -19,9 +19,9 @@ Home yoga videos cannot notice when someone leaves the frame, needs a gentler op
 - Live landmark estimation from your camera with MoveNet, drawn over the video, feeding the same confidence gate and alignment rules.
 - A 1–5 intensity control that transparently adjusts active hold times without introducing advanced poses.
 - Structured instructions, modifications, landmark requirements, angle ranges, and general cautions.
-- Opt-in, local OpenCV camera preview during calibration and practice; frames are transient and never analyzed or stored in this build.
-- Near-real-time synthetic landmark demonstration through the production analysis boundary.
-- Joint-angle calculations and a 0.70 minimum confidence threshold.
+- Opt-in, local OpenCV camera capture during calibration and practice; frames are analysed on this device, then discarded, never written to disk or uploaded.
+- Synthetic landmark demonstration through the same analysis boundary when no model is installed.
+- Joint-angle calculations and a 0.35 minimum confidence threshold, the value validated against a real body.
 - Bilateral rule strategies support either lead side instead of assuming the left leg always leads.
 - Poses without implemented measurements explicitly say "instruction only" rather than implying alignment was checked.
 - At most two supportive, observable cues at once; timer pauses when confidence is low.
@@ -29,7 +29,7 @@ Home yoga videos cannot notice when someone leaves the frame, needs a gentler op
 - Derived-only JSON session history, explainable rule-based personalization, and full deletion.
 - Automated geometry, confidence, routine, personalization, and persistence tests.
 
-Live OpenCV preview is available from camera setup. ONNX inference is intentionally disabled until the documented MoveNet model artifact is verified, so the application clearly labels coaching as synthetic demo analysis. The UI falls back to demo mode instead of crashing or going blank when camera access fails.
+With the verified model in place, the camera drives coaching: landmarks are estimated on this device, drawn over the mirrored video, and passed through the same confidence gate and alignment rules. Without it the app falls back to synthetic demo landmarks and says so on screen. It also falls back rather than crashing or going blank when camera access fails.
 
 ## Java 26
 
@@ -59,7 +59,7 @@ For a provisional check on that host only, use `gradlew.bat test -PjavaVersion=2
 
 ## Model setup
 
-Read [models/README.md](models/README.md). The current contest-safe build does not claim live inference: it replays synthetic landmark fixtures. Once a specific MoveNet ONNX artifact has passed checksum, license, tensor-shape, and pose-fixture validation, place it at `models/movenet-singlepose-lightning.onnx` and enable the adapter in a Phase 2 build.
+Run `.\scripts\fetch-model.ps1` once. It downloads MoveNet SinglePose Lightning (~9 MB, no account) and refuses any file whose SHA-256 does not match the validated artifact. Weights are not committed to git. See [models/README.md](models/README.md) and the [model card](docs/model-card.md).
 
 ## Run
 
@@ -88,7 +88,8 @@ Normal operation saves no video, images, face data, landmark coordinates, identi
 - Spoken guidance uses the Windows speech engine; other platforms fall back to silence rather than a second-rate voice.
 - Alignment rules cover a reliable subset; some poses provide instruction and confidence checks without geometric correction.
 - Single-view 2D angles cannot resolve depth or guarantee alignment or safety.
-- Text-to-speech, multiple routine modes, and accessibility audit remain Phase 2.
+- Spoken guidance uses whichever voice Windows has installed; the stock desktop voices sound dated, and adding a natural voice in Settings improves it considerably.
+- Multiple routine modes and a full accessibility audit remain future work.
 - Live camera behavior still needs a device-specific Windows smoke test even though the Java 26 build is verified.
 
 ## Three-minute demonstration

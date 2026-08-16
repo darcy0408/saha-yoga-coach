@@ -13,7 +13,7 @@ Saha is educational fitness software, not medical care or a substitute for a qua
 
 ## Coaching policy
 
-Saha needs every required landmark at confidence 0.70 or higher. Otherwise corrections and timing pause, and the app requests better framing or lighting. Valid observations are compared with flexible ranges. The coach shows at most two suggestions and uses language such as “try,” “consider,” and “appears.”
+Saha needs every required landmark at or above the confidence gate. Otherwise corrections and timing pause, and the app requests better framing or lighting. Valid observations are compared with flexible ranges. The coach shows at most two suggestions and uses language such as “try,” “consider,” and “appears.”
 
 Stop immediately for pain, dizziness, numbness, weakness, or unusual discomfort. Children and people who are pregnant, recently had surgery, have chronic pain, or have significant mobility limitations should seek appropriate professional guidance. Default routines exclude advanced inversions, unsupported headstands, and extreme backbends.
 

@@ -26,6 +26,7 @@ public final class SpokenCoach {
     // a flag rather than a sentinel timestamp: nanoTime may be negative, and
     // subtracting a sentinel from it overflows and suppresses the first cue
     private boolean hasSpoken;
+    private boolean nagged;
     private long lastAt;
 
     public SpokenCoach() { this(System::nanoTime); }
@@ -44,6 +45,23 @@ public final class SpokenCoach {
         if (hasSpoken && clock.getAsLong() - lastAt < CUE_GAP_NANOS) return Optional.empty();
         return emit(text);
     }
+
+    /**
+     * A framing problem, said once and then left alone.
+     *
+     * Repeating "your shoulders are out of view" every few seconds at someone
+     * who is trying to fix exactly that is nagging, not coaching. Call
+     * {@link #framingResolved()} when the view recovers to arm it again.
+     */
+    public Optional<String> framing(String text) {
+        if (nagged) return Optional.empty();
+        nagged = true;
+        if (text == null || text.isBlank()) return Optional.empty();
+        return emit(text);
+    }
+
+    /** Re-arms the framing warning once the camera can see enough again. */
+    public void framingResolved() { nagged = false; }
 
     /** Said once when the practice ends. */
     public Optional<String> finish(boolean completed) {

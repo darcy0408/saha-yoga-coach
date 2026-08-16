@@ -26,15 +26,37 @@ import java.util.concurrent.atomic.AtomicReference;
  * offered.
  */
 public final class SystemVoice implements Voice {
+    /**
+     * Windows ships only the older desktop voices unless a newer one has been
+     * added through Settings, so this picks the least mechanical of whatever is
+     * installed, slows it slightly, and speaks through SSML so sentence breaks
+     * are honoured. It cannot make a 2013 synthesiser sound human; installing a
+     * natural voice does that, and this picks it up automatically when present.
+     */
+    /** Only this exact line means the voice is free; the shell also emits progress noise. */
+    private static final String READY = "<<saha-ready>>";
+
     private static final String SCRIPT = """
+            $ProgressPreference = 'SilentlyContinue'
             Add-Type -AssemblyName System.Speech
             $voice = New-Object System.Speech.Synthesis.SpeechSynthesizer
-            $voice.Rate = -1
+            $installed = $voice.GetInstalledVoices() | Where-Object { $_.Enabled } | ForEach-Object { $_.VoiceInfo.Name }
+            $preferred = @('Natural', 'Aria', 'Jenny', 'Guy', 'Zira', 'Mark', 'David')
+            foreach ($want in $preferred) {
+              $match = $installed | Where-Object { $_ -like "*$want*" } | Select-Object -First 1
+              if ($match) { $voice.SelectVoice($match); break }
+            }
+            $voice.Rate = -2
+            $voice.Volume = 100
             while ($true) {
               $line = [Console]::In.ReadLine()
               if ($null -eq $line) { break }
-              if ($line.Trim().Length -gt 0) { $voice.Speak($line) }
-              [Console]::Out.WriteLine('.')
+              if ($line.Trim().Length -gt 0) {
+                $safe = [System.Security.SecurityElement]::Escape($line)
+                $ssml = "<speak version='1.0' xmlns='http://www.w3.org/2001/10/synthesis' xml:lang='en-US'><prosody rate='-10%'>$safe</prosody></speak>"
+                try { $voice.SpeakSsml($ssml) } catch { $voice.Speak($line) }
+              }
+              [Console]::Out.WriteLine('<<saha-ready>>')
               [Console]::Out.Flush()
             }
             """;
@@ -79,7 +101,12 @@ public final class SystemVoice implements Voice {
 
     private void readMarkers() {
         try (var reader = new BufferedReader(new InputStreamReader(process.getInputStream(), StandardCharsets.UTF_8))) {
-            while (running && reader.readLine() != null) {
+            String line;
+            while (running && (line = reader.readLine()) != null) {
+                // the shell interleaves its own progress records here, and
+                // treating one of those as "finished speaking" would let the
+                // next line be written while the voice is still talking
+                if (!READY.equals(line.trim())) continue;
                 ready = true;
                 synchronized (idle) { idle.notifyAll(); }
             }

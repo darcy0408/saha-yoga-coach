@@ -63,7 +63,7 @@ Only after stability: second-camera fusion, voice control, wearable input, progr
 - **Java 26 preview API:** `LazyConstant` requires `--enable-preview`; Gradle applies it consistently to compilation, tests, and execution.
 - **Pose model licensing/shape mismatch:** do not bundle an unverified model; checksum and document an approved MoveNet ONNX export before enabling inference.
 - **Native camera variance:** isolate OpenCV, enumerate devices, catch load/open failures, preserve demo and instruction-only modes.
-- **Unsafe or noisy coaching:** require aggregate landmark confidence of at least 0.70, use ranges, suppress feedback on occlusion, and show at most two cues.
+- **Unsafe or noisy coaching:** require landmark confidence at or above the validated gate, use ranges, suppress feedback on occlusion, and show at most two cues.
 - **Privacy leakage:** no frame recording, no coordinate history, redacted logs, derived metrics only, user-visible deletion.
 - **Schedule:** prioritize a deterministic judge demo over optional integrations.
 
@@ -74,7 +74,7 @@ Only after stability: second-camera fusion, voice control, wearable input, progr
 - Calibration explains framing, light, space, and recovery from low confidence.
 - Beginner plan includes warm-up, main work, transitions, cooldown, and totals 18–22 minutes.
 - Catalog has at least 12 poses, each with instruction, modification, landmark requirements, and caution.
-- Fixture landmarks produce expected angles; confidence below 0.70 yields guidance, never correction.
+- Fixture landmarks produce expected angles; confidence below the gate yields guidance, never correction.
 - Coach returns no more than two supportive suggestions.
 - Pause/low confidence stops elapsed hold time; skip/easier/stop controls work.
 - Only derived session summaries persist, can be viewed, and can be deleted.
