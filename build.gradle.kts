@@ -41,6 +41,15 @@ tasks.test {
     jvmArgs("--enable-preview")
 }
 
+tasks.register<JavaExec>("figureSnapshot") {
+    group = "verification"
+    description = "Renders the observed-landmarks figure to build/review/figure.png"
+    classpath = sourceSets.main.get().runtimeClasspath
+    mainClass = "io.saha.yoga.illustration.FigureSnapshotLauncher"
+    args(layout.buildDirectory.file("review/figure.png").get().asFile.absolutePath)
+    jvmArgs("--enable-preview", "--enable-native-access=ALL-UNNAMED")
+}
+
 tasks.register<JavaExec>("colourCheck") {
     group = "verification"
     description = "Prints how the preview pipeline interprets known pixel bytes"

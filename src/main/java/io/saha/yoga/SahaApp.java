@@ -535,6 +535,18 @@ public final class SahaApp extends Application {
     /** Below this, a keypoint is a guess rather than an observation, so it is not drawn. */
     private static final double DRAW_THRESHOLD = .30;
 
+    // A friendlier figure: warm lit joints, rounded limbs, and a face that
+    // looks back at you. Someone holding a pose for fifty seconds is looking at
+    // this, so it may as well be good company.
+    private static final Color LIMB = Color.web("#5fb9a6");
+    private static final Color JOINT = Color.web("#ffd489");
+    private static final Color SKIN = Color.web("#f0dcae");
+    private static final Color INK = Color.web("#1d4d47");
+
+    private static javafx.scene.effect.DropShadow glow(Color colour, double radius) {
+        return new javafx.scene.effect.DropShadow(javafx.scene.effect.BlurType.GAUSSIAN, colour, radius, .38, 0, 0);
+    }
+
     /**
      * Draws the estimated joints over the video in the image's own space.
      *
@@ -556,14 +568,17 @@ public final class SahaApp extends Application {
             if (a == null || b == null || a.confidence() < DRAW_THRESHOLD || b.confidence() < DRAW_THRESHOLD) continue;
             var bone = new Line(screenX(a.x(), originX, shown), originY + a.y() * shown,
                     screenX(b.x(), originX, shown), originY + b.y() * shown);
-            bone.setStroke(Color.web("#8dd7c6"));
-            bone.setStrokeWidth(3);
+            bone.setStroke(LIMB);
+            bone.setStrokeWidth(4);
+            bone.setStrokeLineCap(javafx.scene.shape.StrokeLineCap.ROUND);
+            bone.setEffect(glow(LIMB.deriveColor(0, 1, 1, .5), 7));
             landmarkOverlay.getChildren().add(bone);
         }
         points.forEach((name, mark) -> {
             if (mark.confidence() < DRAW_THRESHOLD) return;
             double radius = switch (name) { case LEFT_HAND, RIGHT_HAND, LEFT_TOE, RIGHT_TOE -> 3; default -> 5; };
-            var dot = new Circle(screenX(mark.x(), originX, shown), originY + mark.y() * shown, radius, Color.web("#f4c77a"));
+            var dot = new Circle(screenX(mark.x(), originX, shown), originY + mark.y() * shown, radius, JOINT);
+            dot.setEffect(glow(JOINT, radius * 2.4));
             landmarkOverlay.getChildren().add(dot);
         });
     }
@@ -628,17 +643,32 @@ public final class SahaApp extends Application {
         var floorLabel = new Text(offsetX + scale * .05, floorY - 6, "floor"); floorLabel.setFill(Color.web("#86aaa3"));
         bodyView.getChildren().add(floorLabel);
         var links = List.of(new LandmarkName[]{LandmarkName.LEFT_SHOULDER,LandmarkName.RIGHT_SHOULDER}, new LandmarkName[]{LandmarkName.LEFT_HIP,LandmarkName.RIGHT_HIP}, new LandmarkName[]{LandmarkName.LEFT_HIP,LandmarkName.LEFT_KNEE}, new LandmarkName[]{LandmarkName.LEFT_KNEE,LandmarkName.LEFT_ANKLE}, new LandmarkName[]{LandmarkName.LEFT_ANKLE,LandmarkName.LEFT_TOE}, new LandmarkName[]{LandmarkName.RIGHT_HIP,LandmarkName.RIGHT_KNEE}, new LandmarkName[]{LandmarkName.RIGHT_KNEE,LandmarkName.RIGHT_ANKLE}, new LandmarkName[]{LandmarkName.RIGHT_ANKLE,LandmarkName.RIGHT_TOE}, new LandmarkName[]{LandmarkName.LEFT_SHOULDER,LandmarkName.LEFT_ELBOW}, new LandmarkName[]{LandmarkName.LEFT_ELBOW,LandmarkName.LEFT_WRIST}, new LandmarkName[]{LandmarkName.LEFT_WRIST,LandmarkName.LEFT_HAND}, new LandmarkName[]{LandmarkName.RIGHT_SHOULDER,LandmarkName.RIGHT_ELBOW}, new LandmarkName[]{LandmarkName.RIGHT_ELBOW,LandmarkName.RIGHT_WRIST}, new LandmarkName[]{LandmarkName.RIGHT_WRIST,LandmarkName.RIGHT_HAND});
-        for (var link : links) { var a=frame.landmarks().get(link[0]); var b=frame.landmarks().get(link[1]); if (a == null || b == null) continue; var line=new Line(offsetX+a.x()*scale,offsetY+a.y()*scale,offsetX+b.x()*scale,offsetY+b.y()*scale); line.setStroke(Color.web("#8dd7c6")); line.setStrokeWidth(5); bodyView.getChildren().add(line); }
+        double limbWidth = Math.max(5, scale * .018);
+        for (var link : links) {
+            var a = frame.landmarks().get(link[0]); var b = frame.landmarks().get(link[1]);
+            if (a == null || b == null) continue;
+            var line = new Line(offsetX+a.x()*scale, offsetY+a.y()*scale, offsetX+b.x()*scale, offsetY+b.y()*scale);
+            line.setStroke(LIMB); line.setStrokeWidth(limbWidth);
+            line.setStrokeLineCap(javafx.scene.shape.StrokeLineCap.ROUND);
+            line.setEffect(glow(LIMB.deriveColor(0, 1, 1, .55), limbWidth * 1.6));
+            bodyView.getChildren().add(line);
+        }
         var leftHip=frame.landmarks().get(LandmarkName.LEFT_HIP);var rightHip=frame.landmarks().get(LandmarkName.RIGHT_HIP);
         var leftShoulderPoint=frame.landmarks().get(LandmarkName.LEFT_SHOULDER);var rightShoulderPoint=frame.landmarks().get(LandmarkName.RIGHT_SHOULDER);
         double spineStartX=offsetX+(leftShoulderPoint.x()+rightShoulderPoint.x())*.5*scale,spineStartY=offsetY+(leftShoulderPoint.y()+rightShoulderPoint.y())*.5*scale;
         double spineEndX=offsetX+(leftHip.x()+rightHip.x())*.5*scale,spineEndY=offsetY+(leftHip.y()+rightHip.y())*.5*scale;
         double sx=spineEndX-spineStartX,sy=spineEndY-spineStartY,length=Math.max(1,Math.hypot(sx,sy));
         var spine=new QuadCurve(spineStartX,spineStartY,(spineStartX+spineEndX)/2-(sy/length)*landmarks.spineBend()*scale,(spineStartY+spineEndY)/2+(sx/length)*landmarks.spineBend()*scale,spineEndX,spineEndY);
-        spine.setFill(Color.TRANSPARENT);spine.setStroke(Color.web("#8dd7c6"));spine.setStrokeWidth(6);bodyView.getChildren().add(spine);
+        spine.setFill(Color.TRANSPARENT); spine.setStroke(LIMB); spine.setStrokeWidth(limbWidth * 1.15);
+        spine.setStrokeLineCap(javafx.scene.shape.StrokeLineCap.ROUND);
+        spine.setEffect(glow(LIMB.deriveColor(0, 1, 1, .55), limbWidth * 1.6));
+        bodyView.getChildren().add(spine);
         frame.landmarks().entrySet().stream().filter(entry -> entry.getKey() != LandmarkName.NOSE).forEach(entry -> {
-            double radius=switch(entry.getKey()){case LEFT_HAND,RIGHT_HAND,LEFT_TOE,RIGHT_TOE->3.5;default->5.5;};var p=entry.getValue();
-            bodyView.getChildren().add(new Circle(offsetX+p.x()*scale,offsetY+p.y()*scale,radius,Color.web("#f4c77a")));
+            double radius = switch (entry.getKey()) { case LEFT_HAND,RIGHT_HAND,LEFT_TOE,RIGHT_TOE -> limbWidth * .62; default -> limbWidth * .92; };
+            var p = entry.getValue();
+            var dot = new Circle(offsetX+p.x()*scale, offsetY+p.y()*scale, radius, JOINT);
+            dot.setEffect(glow(JOINT, radius * 2.6));
+            bodyView.getChildren().add(dot);
         });
         var nose = frame.landmarks().get(LandmarkName.NOSE);
         var leftShoulder = frame.landmarks().get(LandmarkName.LEFT_SHOULDER);
@@ -648,33 +678,49 @@ public final class SahaApp extends Application {
         double headCenterY = offsetY + nose.y()*scale;
         double headRadiusX=headRadius*.84, headRadiusY=headRadius*1.08;
         var head = new Ellipse(headCenterX, headCenterY, headRadiusX, headRadiusY);
-        head.setFill(Color.TRANSPARENT);
-        head.setStroke(Color.web("#8dd7c6")); head.setStrokeWidth(5);
+        head.setFill(SKIN);
+        head.setStroke(INK); head.setStrokeWidth(Math.max(4, scale * .014));
+        head.setEffect(glow(JOINT.deriveColor(0, 1, 1, .5), headRadius * .9));
         double shoulderX = offsetX+((leftShoulder.x()+rightShoulder.x())/2)*scale;
         double shoulderY = offsetY+((leftShoulder.y()+rightShoulder.y())/2)*scale;
         double dx=shoulderX-headCenterX,dy=shoulderY-headCenterY;
         double boundaryScale=1/Math.sqrt((dx*dx)/(headRadiusX*headRadiusX)+(dy*dy)/(headRadiusY*headRadiusY));
         var neck = new Line(headCenterX+dx*boundaryScale,headCenterY+dy*boundaryScale,shoulderX,shoulderY);
-        neck.setStroke(Color.web("#8dd7c6")); neck.setStrokeWidth(5);
+        neck.setStroke(LIMB); neck.setStrokeWidth(limbWidth);
+        neck.setStrokeLineCap(javafx.scene.shape.StrokeLineCap.ROUND);
         bodyView.getChildren().addAll(neck, head);
         drawFace(headCenterX, headCenterY, headRadius, landmarks.faceDirection());
         var label = new Text(18, 28, landmarks.description()); label.setFill(Color.web("#b7c8c5")); bodyView.getChildren().add(label);
     }
 
+    /** A calm, friendly face: two eyes and a smile, turned the way the pose looks. */
     private void drawFace(double x, double y, double radius, FaceDirection direction) {
-        var color = Color.web("#f4c77a");
-        if (direction == FaceDirection.FRONT) {
-            bodyView.getChildren().addAll(new Circle(x-radius*.32,y-radius*.18,2.4,color), new Circle(x+radius*.32,y-radius*.18,2.4,color));
-            var nose = new Circle(x,y+radius*.05,2.2,color);
-            var mouth = new Line(x-radius*.24,y+radius*.34,x+radius*.24,y+radius*.34); mouth.setStroke(color); mouth.setStrokeWidth(2);
-            bodyView.getChildren().addAll(nose,mouth); return;
+        double stroke = Math.max(2, radius * .11);
+        if (direction == FaceDirection.FRONT || direction == FaceDirection.UP) {
+            var left = new Circle(x - radius * .30, y - radius * .16, Math.max(2, radius * .10), INK);
+            var right = new Circle(x + radius * .30, y - radius * .16, Math.max(2, radius * .10), INK);
+            bodyView.getChildren().addAll(left, right, smile(x, y + radius * .10, radius * .46, stroke, 200, 140));
+            return;
         }
-        double vx = direction==FaceDirection.LEFT?-1:direction==FaceDirection.RIGHT?1:0;
-        double vy = direction==FaceDirection.UP?-1:direction==FaceDirection.DOWN?1:0;
-        var eye = new Circle(x+vx*radius*.20-vy*radius*.10,y+vy*radius*.20+vx*radius*.10,2.5,color);
-        var nose = new Line(x+vx*radius*.55,y+vy*radius*.55,x+vx*radius*.78,y+vy*radius*.78); nose.setStroke(color); nose.setStrokeWidth(2.5);
-        var mouth = new Line(x+vx*radius*.42-vy*radius*.15,y+vy*radius*.42+vx*radius*.15,x+vx*radius*.42+vy*radius*.15,y+vy*radius*.42-vx*radius*.15); mouth.setStroke(color); mouth.setStrokeWidth(2);
-        bodyView.getChildren().addAll(eye,nose,mouth);
+        // side and floor views show the near eye only, with the smile swung
+        // toward whatever the pose is looking at
+        double vx = direction == FaceDirection.LEFT ? -1 : direction == FaceDirection.RIGHT ? 1 : 0;
+        double vy = direction == FaceDirection.DOWN ? 1 : 0;
+        var eye = new Circle(x + vx * radius * .26 - vy * radius * .12,
+                y + vy * radius * .26 + Math.abs(vx) * radius * .10, Math.max(2, radius * .10), INK);
+        double startAngle = vx < 0 ? 250 : vx > 0 ? 110 : 200;
+        bodyView.getChildren().addAll(eye,
+                smile(x + vx * radius * .16, y + radius * .12 + vy * radius * .10, radius * .40, stroke, startAngle, 110));
+    }
+
+    private javafx.scene.shape.Arc smile(double x, double y, double radius, double stroke, double start, double extent) {
+        var arc = new javafx.scene.shape.Arc(x, y, radius, radius * .78, start, extent);
+        arc.setType(javafx.scene.shape.ArcType.OPEN);
+        arc.setFill(null);
+        arc.setStroke(INK);
+        arc.setStrokeWidth(stroke);
+        arc.setStrokeLineCap(javafx.scene.shape.StrokeLineCap.ROUND);
+        return arc;
     }
 
     @Override public void stop() { if (clock != null) clock.stop(); stopCameraPreview(); voice.close(); landmarks.close(); }
