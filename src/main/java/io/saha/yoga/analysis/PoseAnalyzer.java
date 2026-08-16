@@ -15,9 +15,18 @@ public final class PoseAnalyzer {
      * against a real body in the sibling project this model came from.
      */
     public static final double RELIABILITY_THRESHOLD = 0.35;
-    /** Enough to know a person is present and upright. */
-    private static final List<LandmarkName> CORE = List.of(LandmarkName.LEFT_SHOULDER, LandmarkName.RIGHT_SHOULDER,
-            LandmarkName.LEFT_HIP, LandmarkName.RIGHT_HIP);
+    /**
+     * Enough to know a person is there at all.
+     *
+     * Shoulders only, and only the better of the two. Hips were in this set
+     * until a seated practice showed the flaw: sitting cross-legged puts your
+     * thighs across your own hip joints, so they cannot be seen from the front
+     * at any distance, and demanding them told someone plainly in frame to step
+     * back until their whole body fit. A pose that measures a hip angle still
+     * requires the hip - that comes from its own rule, below - but presence
+     * does not.
+     */
+    private static final List<LandmarkName> SHOULDERS = List.of(LandmarkName.LEFT_SHOULDER, LandmarkName.RIGHT_SHOULDER);
 
     public AnalysisResult analyze(Pose pose, LandmarkFrame frame) {
         double confidence = visibility(pose, frame);
@@ -50,7 +59,9 @@ public final class PoseAnalyzer {
      * how most of these poses are best viewed.
      */
     private double visibility(Pose pose, LandmarkFrame frame) {
-        double core = frame.minimumConfidence(CORE);
+        // the better shoulder: one is enough to know someone is there, and
+        // standing side-on to the camera hides the far one
+        double core = Math.max(confidence(frame, LandmarkName.LEFT_SHOULDER), confidence(frame, LandmarkName.RIGHT_SHOULDER));
         if (pose.alignmentRules().isEmpty()) return core;
         double measurable = 1;
         for (var rule : pose.alignmentRules()) {
@@ -61,9 +72,14 @@ public final class PoseAnalyzer {
         return Math.min(core, measurable);
     }
 
+    private double confidence(LandmarkFrame frame, LandmarkName name) {
+        var point = frame.landmarks().get(name);
+        return point == null ? 0 : point.confidence();
+    }
+
     /** Names the body parts the camera cannot see, rather than guessing at the cause. */
     private String framingHint(Pose pose, LandmarkFrame frame) {
-        var needed = new LinkedHashSet<>(CORE);
+        var needed = new LinkedHashSet<>(SHOULDERS);
         for (var rule : pose.alignmentRules()) {
             needed.add(rule.first()); needed.add(rule.vertex()); needed.add(rule.third());
             needed.add(mirror(rule.first())); needed.add(mirror(rule.vertex())); needed.add(mirror(rule.third()));
@@ -80,7 +96,7 @@ public final class PoseAnalyzer {
         if (weak.isEmpty()) return "Hold still for a moment so the view can settle.";
         String parts = weak.size() == 1 ? weak.getFirst()
                 : String.join(", ", weak.subList(0, weak.size() - 1)) + " and " + weak.getLast();
-        return "Your " + parts + " are out of view. Step back or tilt the camera until your whole body fits, then this resumes on its own.";
+        return "Your " + parts + " are out of view. Adjust the camera or turn side-on, and this resumes on its own.";
     }
 
     private static String readable(LandmarkName name) {

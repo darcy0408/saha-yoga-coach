@@ -20,6 +20,16 @@ import java.util.function.LongSupplier;
 public final class SpokenCoach {
     /** Quiet time between ordinary cues. */
     static final long CUE_GAP_NANOS = 7_000_000_000L;
+    /**
+     * Hard floor between two framing warnings.
+     *
+     * Confidence sitting near the gate flickers between states, and each
+     * recovery re-arms the warning, which is how "your hips are out of view"
+     * ended up being said over and over at someone who could not do anything
+     * about it. The flag alone was not enough; this makes rapid repetition
+     * impossible however the states bounce.
+     */
+    static final long FRAMING_GAP_NANOS = 45_000_000_000L;
 
     private final LongSupplier clock;
     private String lastLine;
@@ -28,6 +38,7 @@ public final class SpokenCoach {
     private boolean hasSpoken;
     private boolean nagged;
     private long lastAt;
+    private long lastFramingAt;
 
     public SpokenCoach() { this(System::nanoTime); }
 
@@ -55,8 +66,10 @@ public final class SpokenCoach {
      */
     public Optional<String> framing(String text) {
         if (nagged) return Optional.empty();
+        if (hasSpoken && clock.getAsLong() - lastFramingAt < FRAMING_GAP_NANOS) return Optional.empty();
         nagged = true;
         if (text == null || text.isBlank()) return Optional.empty();
+        lastFramingAt = clock.getAsLong();
         return emit(text);
     }
 

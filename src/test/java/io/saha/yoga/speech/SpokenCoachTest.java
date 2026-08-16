@@ -40,6 +40,30 @@ class SpokenCoachTest {
         assertTrue(coach.announce(catalog.require("chair")).isPresent());
     }
 
+    @Test void aFramingWarningIsNotRepeatedWhenConfidenceFlickers() {
+        now = SpokenCoach.FRAMING_GAP_NANOS * 10;
+        assertTrue(coach.framing("Your hips are out of view.").isPresent());
+        // the view recovers for an instant and drops again, which is what the
+        // gate does when confidence sits right on the threshold. Nothing more
+        // is said for the whole quiet window, however many times it bounces.
+        // twenty bounces spread over half the quiet window, so the loop cannot
+        // walk past it and make this test about the wrong thing
+        long step = SpokenCoach.FRAMING_GAP_NANOS / 40;
+        for (int i = 0; i < 20; i++) {
+            coach.framingResolved();
+            now += step;
+            assertTrue(coach.framing("Your hips are out of view.").isEmpty(), "repeat " + i + " should stay quiet");
+        }
+    }
+
+    @Test void aFramingWarningCanBeSaidAgainMuchLater() {
+        now = SpokenCoach.FRAMING_GAP_NANOS * 10;
+        assertTrue(coach.framing("Your feet are out of view.").isPresent());
+        coach.framingResolved();
+        now += SpokenCoach.FRAMING_GAP_NANOS * 2;
+        assertTrue(coach.framing("Your feet are out of view.").isPresent(), "a genuinely new episode should speak");
+    }
+
     @Test void blankCuesAreNeverSpoken() {
         now = SpokenCoach.CUE_GAP_NANOS * 10;
         assertTrue(coach.cue("   ").isEmpty());

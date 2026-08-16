@@ -70,10 +70,22 @@ class VisibilityTest {
         assertInstanceOf(AnalysisResult.Reliable.class, result);
     }
 
-    @Test void aMissingTorsoStillStopsEverything() {
+    @Test void anEmptyRoomStillStopsEverything() {
         var result = analyzer.analyze(catalog.require("easy_seat"), frame(.2, .9, .9));
         var unreliable = assertInstanceOf(AnalysisResult.Unreliable.class, result);
-        assertTrue(unreliable.guidance().contains("shoulders") || unreliable.guidance().contains("hips"),
-                "should name the torso: " + unreliable.guidance());
+        assertTrue(unreliable.guidance().contains("shoulders"), "should name what is missing: " + unreliable.guidance());
+    }
+
+    @Test void sittingCrossLeggedDoesNotDemandTheHips() {
+        // thighs cross the hip joints when seated, so the model scores them low
+        // however far back you sit. Easy Seat measures nothing, so it must run.
+        var p = new EnumMap<LandmarkName, Landmark>(LandmarkName.class);
+        var seen = frame(.9, .9, .9).landmarks();
+        seen.forEach((name, mark) -> {
+            double confidence = switch (name) { case LEFT_HIP, RIGHT_HIP -> .08; default -> mark.confidence(); };
+            p.put(name, new Landmark(mark.x(), mark.y(), confidence));
+        });
+        var result = analyzer.analyze(catalog.require("easy_seat"), new LandmarkFrame(Instant.now(), p));
+        assertInstanceOf(AnalysisResult.InstructionOnly.class, result);
     }
 }
