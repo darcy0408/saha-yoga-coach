@@ -15,6 +15,8 @@ Home yoga videos cannot notice when someone leaves the frame, needs a gentler op
 - Polished JavaFX onboarding, calibration, coaching, and progress screens.
 - A beginner practice of 20 poses in seven phases — centering, warm-up, standing, balance, floor work, cooldown, rest — about 20 minutes end to end.
 - A minimal line figure for every pose, stroked live from MIT-licensed vector geometry in the interface's own ink.
+- Spoken guidance through the operating system's own voice, so poses and cues can be followed without reading the screen. Local, toggleable, and rate-limited so it guides rather than chatters.
+- Live landmark estimation from your camera with MoveNet, drawn over the video, feeding the same confidence gate and alignment rules.
 - A 1–5 intensity control that transparently adjusts active hold times without introducing advanced poses.
 - Structured instructions, modifications, landmark requirements, angle ranges, and general cautions.
 - Opt-in, local OpenCV camera preview during calibration and practice; frames are transient and never analyzed or stored in this build.
@@ -81,8 +83,9 @@ Normal operation saves no video, images, face data, landmark coordinates, identi
 
 ## Known limitations
 
-- Live camera preview is not yet connected to ONNX landmark inference, so coaching remains demo-only.
-- Demo landmarks are synthetic and prove workflow/analysis behavior, not model accuracy.
+- Camera coaching has not yet been validated against a person holding each pose, so its cues should be read as plausible rather than proven.
+- Without the model present the app falls back to synthetic demo landmarks, which prove workflow and analysis behaviour, not model accuracy.
+- Spoken guidance uses the Windows speech engine; other platforms fall back to silence rather than a second-rate voice.
 - Alignment rules cover a reliable subset; some poses provide instruction and confidence checks without geometric correction.
 - Single-view 2D angles cannot resolve depth or guarantee alignment or safety.
 - Text-to-speech, multiple routine modes, and accessibility audit remain Phase 2.

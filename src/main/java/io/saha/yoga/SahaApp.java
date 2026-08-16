@@ -5,6 +5,9 @@ import io.saha.yoga.domain.*;
 import io.saha.yoga.illustration.*;
 import io.saha.yoga.personalization.PersonalizationEngine;
 import io.saha.yoga.routine.*;
+import io.saha.yoga.speech.SpokenCoach;
+import io.saha.yoga.speech.SystemVoice;
+import io.saha.yoga.speech.Voice;
 import io.saha.yoga.storage.*;
 import io.saha.yoga.vision.*;
 import javafx.animation.KeyFrame;
@@ -39,6 +42,9 @@ public final class SahaApp extends Application {
     private final PoseCatalog catalog = new PoseCatalog();
     private final RoutineGenerator generator = new RoutineGenerator(catalog);
     private final PoseAnalyzer analyzer = new PoseAnalyzer();
+    private final SpokenCoach spoken = new SpokenCoach();
+    private Voice voice = Voice.silent();
+    private boolean speechWanted = true;
     private final DemoLandmarkSource demoSource = new DemoLandmarkSource();
     /** Swapped to the camera source once a verified model is driving real landmarks. */
     private LandmarkSource landmarks = demoSource;
@@ -268,6 +274,7 @@ public final class SahaApp extends Application {
     private void beginRoutine() {
         try { var recommendation = new PersonalizationEngine().recommend(store.load()); routine = generator.beginner(recommendation.durationAdjustments(), recommendation.explanations(), preferredIntensity); }
         catch (IOException e) { routine = generator.beginner(Map.of(), List.of("Session history could not be read; using the gentle baseline."), preferredIntensity); }
+        if (speechWanted && !voice.isAvailable()) voice = SystemVoice.create();
         itemIndex = 0; remaining = routine.items().getFirst().durationSeconds(); showCoach();
     }
 
@@ -282,16 +289,27 @@ public final class SahaApp extends Application {
         bodyView.setVisible(!livePreviewActive);
         var stop = actionButton("Stop now"); stop.getStyleClass().add("danger"); stop.setOnAction(e -> finish(false));
         var pause = actionButton("Pause"); pause.setOnAction(e -> { paused = !paused; pause.setText(paused ? "Resume" : "Pause"); });
-        var repeat = actionButton("Repeat cue"); repeat.setOnAction(e -> suggestionLabel.requestFocus());
+        var repeat = actionButton("Repeat cue"); repeat.setOnAction(e -> {
+            suggestionLabel.requestFocus();
+            voice.say(suggestionLabel.getText());
+        });
         var easier = actionButton("Easier option"); easier.setOnAction(e -> optionalLabel.setText("Optional adjustment: " + current().pose().modifications().getFirst()));
         var next = actionButton("Next pose"); next.getStyleClass().add("next"); next.setOnAction(e -> advance(true));
+        var speech = actionButton(speechLabel());
+        speech.setOnAction(e -> {
+            speechWanted = !speechWanted;
+            if (speechWanted && !voice.isAvailable()) voice = SystemVoice.create();
+            else if (!speechWanted) { voice.close(); voice = Voice.silent(); }
+            speech.setText(speechLabel());
+        });
         var controls = new GridPane(); controls.setHgap(10); controls.setVgap(10);
         var leftColumn = new ColumnConstraints(); leftColumn.setPercentWidth(50);
         var rightColumn = new ColumnConstraints(); rightColumn.setPercentWidth(50);
         controls.getColumnConstraints().addAll(leftColumn, rightColumn);
         controls.add(pause, 0, 0); controls.add(repeat, 1, 0);
         controls.add(easier, 0, 1); controls.add(next, 1, 1);
-        controls.add(stop, 0, 2, 2, 1);
+        controls.add(speech, 0, 2, 2, 1);
+        controls.add(stop, 0, 3, 2, 1);
         var reasonText = wrapLabel(); reasonText.setMinHeight(Region.USE_PREF_SIZE); reasonText.setText(String.join(" ", routine.explanations()));
         var feedback = new VBox(10, phaseLabel, poseLabel, timerLabel, statusLabel, suggestionLabel, optionalLabel, confidenceLabel, new Separator(), new Label("Why this routine changed"), reasonText, controls); feedback.getStyleClass().add("card"); feedback.setPrefWidth(470); feedback.setMaxWidth(540);
         var observationTitle = new Label(cameraSource != null
@@ -342,6 +360,7 @@ public final class SahaApp extends Application {
             case AnalysisResult.Reliable r -> {
                 statusLabel.setText("Status: " + r.status());
                 suggestionLabel.setText("Primary suggestion: " + (r.suggestions().isEmpty() ? "Keep breathing comfortably." : r.suggestions().getFirst()));
+                if (!r.suggestions().isEmpty()) spoken.cue(r.suggestions().getFirst()).ifPresent(voice::say);
                 optionalLabel.setText("Optional adjustment: " + current().pose().modifications().getFirst());
                 confidenceLabel.setText("Confidence: " + level(r.confidence()) + reading(r.confidence()));
             }
@@ -355,10 +374,15 @@ public final class SahaApp extends Application {
                 statusLabel.setText("Status: Camera view needs attention"); suggestionLabel.setText("Primary suggestion: " + u.guidance());
                 optionalLabel.setText("Corrections are paused until the view improves.");
                 confidenceLabel.setText("Confidence: " + level(u.confidence()) + reading(u.confidence()));
+                spoken.cue(u.guidance()).ifPresent(voice::say);
             }
         }
         if (!paused && mayTime && ++clockTicks % 10 == 0 && --remaining <= 0) advance(false);
         timerLabel.setText(format(remaining) + (paused || !mayTime ? " · paused" : ""));
+    }
+    private String speechLabel() {
+        if (!speechWanted) return "Spoken guidance: off";
+        return voice.isAvailable() ? "Spoken guidance: on" : "Spoken guidance unavailable";
     }
     private String level(double value) { return value >= .85 ? "High" : value >= .70 ? "Medium" : "Low"; }
     /** The measured number alongside the word, so a pause can be diagnosed rather than guessed at. */
@@ -369,6 +393,7 @@ public final class SahaApp extends Application {
         landmarks.selectPose(item.pose().id());
         poseLabel.setText("Current pose: " + item.pose().displayName());
         phaseLabel.setText(item.phase().toUpperCase()); timerLabel.setText(format(remaining));
+        spoken.announce(item.pose()).ifPresent(voice::say);
         updateTeachingView(item);
         updatePracticePath();
         if (!livePreviewActive) drawFrame(landmarks.nextFrame());
@@ -446,7 +471,12 @@ public final class SahaApp extends Application {
     private void saveMetric(boolean skipped) {
         try { store.append(new SessionMetric(current().pose().id(), Instant.now(), current().durationSeconds() - remaining, skipped ? 0 : .82, 1, skipped, .91, true)); } catch (IOException ignored) { }
     }
-    private void finish(boolean completed) { if (clock != null) clock.stop(); stopCameraPreview(); showProgress(completed); }
+    private void finish(boolean completed) {
+        if (clock != null) clock.stop();
+        stopCameraPreview();
+        spoken.finish(completed).ifPresent(voice::say);
+        showProgress(completed);
+    }
 
     private void showProgress(boolean completed) {
         List<SessionMetric> history; try { history = store.load(); } catch (IOException e) { history = List.of(); }
@@ -596,6 +626,6 @@ public final class SahaApp extends Application {
         bodyView.getChildren().addAll(eye,nose,mouth);
     }
 
-    @Override public void stop() { if (clock != null) clock.stop(); stopCameraPreview(); landmarks.close(); }
+    @Override public void stop() { if (clock != null) clock.stop(); stopCameraPreview(); voice.close(); landmarks.close(); }
     public static void main(String[] args) { launch(args); }
 }

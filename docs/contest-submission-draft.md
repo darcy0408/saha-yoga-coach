@@ -54,7 +54,9 @@ practice it:
   vector geometry in the interface's own ink and credited on screen;
 - converts anonymous body landmarks into 2D joint angles and checks them
   against pose-specific flexible ranges, on either lead side;
-- offers at most **two** supportive, observable cues at a time;
+- offers at most **two** supportive, observable cues at a time, and can **speak
+  them aloud** through the operating system's own local voice, because nobody
+  can read a screen from inside a forward fold;
 - pauses the pose timer whenever landmark confidence drops below 0.70 instead
   of guessing;
 - provides pause, repeat, skip, an easier option, and an always-visible
