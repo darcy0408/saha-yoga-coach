@@ -48,6 +48,15 @@ public final class SahaApp extends Application {
     /** Show the camera as a mirror, which is what people expect of a self view. */
     private boolean mirrorPreview = true;
     /**
+     * Draw only the figure, never the picture.
+     *
+     * The room is not needed to coach a pose, and showing it puts the
+     * television, the laundry and anyone walking past on screen — and into any
+     * recording made of the screen. The landmarks are the person; everything
+     * else was only ever incidental.
+     */
+    private boolean figureOnly = true;
+    /**
      * Swap red and blue in the preview.
      *
      * Not a bug being preserved: the colours reaching the view are correct, and
@@ -214,11 +223,20 @@ public final class SahaApp extends Application {
                 var image = new WritableImage(latest.width(), latest.height());
                 image.getPixelWriter().setPixels(0, 0, latest.width(), latest.height(),
                         PixelFormat.getByteBgraInstance(), forDisplay(latest), 0, latest.width() * 4);
-                cameraPreview.setImage(image);
-                cameraPreview.setVisible(true);
-                bodyView.setVisible(false);
                 livePreviewActive = true;
-                if (cameraSource != null) drawCameraOverlay(landmarks.nextFrame(), latest.width());
+                if (figureOnly && cameraSource != null) {
+                    // the picture is decoded but never shown: only the figure
+                    // drawn from it reaches the screen
+                    cameraPreview.setVisible(false);
+                    bodyView.setVisible(true);
+                    if (landmarkOverlay != null) landmarkOverlay.getChildren().clear();
+                    drawFrame(landmarks.nextFrame(), true);
+                } else {
+                    cameraPreview.setImage(image);
+                    cameraPreview.setVisible(true);
+                    bodyView.setVisible(false);
+                    if (cameraSource != null) drawCameraOverlay(landmarks.nextFrame(), latest.width());
+                }
                 cameraStatus.setText(cameraSource != null
                         ? "Camera active. Your landmarks are estimated on this device, frame by frame; nothing is recorded or uploaded."
                         : "Local preview active. Frames are transient and are not saved. Alignment analysis is still demo-only.");
@@ -315,10 +333,11 @@ public final class SahaApp extends Application {
         });
         var easier = actionButton("Easier option"); easier.setOnAction(e -> optionalLabel.setText("Optional adjustment: " + current().pose().modifications().getFirst()));
         var next = actionButton("Next pose"); next.getStyleClass().add("next"); next.setOnAction(e -> advance(true));
-        var tint = actionButton(stylizedColour ? "Camera colour: cool" : "Camera colour: true");
+        var tint = actionButton(figureOnly ? "View: figure only" : "View: camera picture");
         tint.setOnAction(e -> {
-            stylizedColour = !stylizedColour;
-            tint.setText(stylizedColour ? "Camera colour: cool" : "Camera colour: true");
+            figureOnly = !figureOnly;
+            tint.setText(figureOnly ? "View: figure only" : "View: camera picture");
+            if (figureOnly && landmarkOverlay != null) landmarkOverlay.getChildren().clear();
         });
         var speech = actionButton(speechLabel());
         speech.setOnAction(e -> {
@@ -338,7 +357,7 @@ public final class SahaApp extends Application {
         var reasonText = wrapLabel(); reasonText.setMinHeight(Region.USE_PREF_SIZE); reasonText.setText(String.join(" ", routine.explanations()));
         var feedback = new VBox(10, phaseLabel, poseLabel, timerLabel, statusLabel, measurementLabel, suggestionLabel, optionalLabel, confidenceLabel, new Separator(), new Label("Why this routine changed"), reasonText, controls); feedback.getStyleClass().add("card"); feedback.setPrefWidth(400); feedback.setMaxWidth(430);
         var observationTitle = new Label(cameraSource != null
-                ? "YOUR LANDMARKS · ESTIMATED ON THIS DEVICE"
+                ? "YOU, AS THE COACH SEES YOU · NO ROOM, NO FURNITURE"
                 : livePreviewActive
                 ? "LIVE CAMERA PREVIEW · ALIGNMENT NOT YET ANALYZED"
                 : "SYNTHETIC DEMO LANDMARKS · NOT AN EXAMPLE POSE"); observationTitle.getStyleClass().add("observation-title");
@@ -369,8 +388,8 @@ public final class SahaApp extends Application {
             return;
         }
         var frame = landmarks.nextFrame();
-        if (cameraSource != null) cameraSource.latestImage().ifPresent(image -> drawCameraOverlay(frame, image.width()));
-        else drawFrame(frame);
+        if (cameraSource != null && !figureOnly) cameraSource.latestImage().ifPresent(image -> drawCameraOverlay(frame, image.width()));
+        else drawFrame(frame, cameraSource != null);
         if (landmarks.isTransitioning()) {
             statusLabel.setText("Status: Moving into " + current().pose().displayName());
             suggestionLabel.setText("Transition: " + landmarks.transitionGuidance());
@@ -646,27 +665,48 @@ public final class SahaApp extends Application {
         return pane;
     }
     private void redrawLastFrame(Pane pane) { if (pane == bodyView && lastDrawnFrame != null) drawFrame(lastDrawnFrame); }
-    private void drawFrame(LandmarkFrame frame) {
+    private void drawFrame(LandmarkFrame frame) { drawFrame(frame, false); }
+
+    /**
+     * Draws the figure from a landmark frame.
+     *
+     * When {@code live} is true the points came from the camera, so only
+     * confident ones are drawn and the floor reference is left off, because a
+     * real body is not grounded to the demo source's fixed plane. Nothing of
+     * the room is drawn in either case — the figure *is* the person, and the
+     * furniture behind them was never needed to coach a pose.
+     */
+    private void drawFrame(LandmarkFrame frame, boolean live) {
         if (bodyView == null) return;
-        lastDrawnFrame = frame;
+        lastDrawnFrame = live ? null : frame;
         bodyView.getChildren().clear();
         double w = Math.max(420, bodyView.getWidth()), h = Math.max(180, bodyView.getHeight());
         double scale = Math.min(w * .92, h * .82);
         double offsetX = (w - scale) / 2;
-        double offsetY = (h - scale) / 2;
-        // the same plane the landmark source grounds poses to, so the body
-        // rests on this line instead of floating relative to it
-        double floorY = offsetY + scale * LandmarkSource.FLOOR_Y;
-        var floor = new Line(offsetX + scale * .04, floorY, offsetX + scale * .96, floorY);
-        floor.setStroke(Color.web("#6fa89d")); floor.setStrokeWidth(2); floor.getStrokeDashArray().addAll(8.0, 6.0);
-        bodyView.getChildren().add(floor);
-        var floorLabel = new Text(offsetX + scale * .05, floorY - 6, "floor"); floorLabel.setFill(Color.web("#86aaa3"));
-        bodyView.getChildren().add(floorLabel);
+        double top = (h - scale) / 2;
+        if (live) {
+            // a camera frame is normalized by width, so it fills only the upper
+            // part of a square box; lift and centre it rather than stranding the
+            // figure against the top edge
+            double lowest = frame.landmarks().values().stream().mapToDouble(Landmark::y).max().orElse(1);
+            top += (scale - scale * lowest) / 2;
+        } else {
+            // the same plane the landmark source grounds poses to, so the body
+            // rests on this line instead of floating relative to it
+            double floorY = top + scale * LandmarkSource.FLOOR_Y;
+            var floor = new Line(offsetX + scale * .04, floorY, offsetX + scale * .96, floorY);
+            floor.setStroke(Color.web("#6fa89d")); floor.setStrokeWidth(2); floor.getStrokeDashArray().addAll(8.0, 6.0);
+            bodyView.getChildren().add(floor);
+            var floorLabel = new Text(offsetX + scale * .05, floorY - 6, "floor"); floorLabel.setFill(Color.web("#86aaa3"));
+            bodyView.getChildren().add(floorLabel);
+        }
+        final double offsetY = top;
         var links = List.of(new LandmarkName[]{LandmarkName.LEFT_SHOULDER,LandmarkName.RIGHT_SHOULDER}, new LandmarkName[]{LandmarkName.LEFT_HIP,LandmarkName.RIGHT_HIP}, new LandmarkName[]{LandmarkName.LEFT_HIP,LandmarkName.LEFT_KNEE}, new LandmarkName[]{LandmarkName.LEFT_KNEE,LandmarkName.LEFT_ANKLE}, new LandmarkName[]{LandmarkName.LEFT_ANKLE,LandmarkName.LEFT_TOE}, new LandmarkName[]{LandmarkName.RIGHT_HIP,LandmarkName.RIGHT_KNEE}, new LandmarkName[]{LandmarkName.RIGHT_KNEE,LandmarkName.RIGHT_ANKLE}, new LandmarkName[]{LandmarkName.RIGHT_ANKLE,LandmarkName.RIGHT_TOE}, new LandmarkName[]{LandmarkName.LEFT_SHOULDER,LandmarkName.LEFT_ELBOW}, new LandmarkName[]{LandmarkName.LEFT_ELBOW,LandmarkName.LEFT_WRIST}, new LandmarkName[]{LandmarkName.LEFT_WRIST,LandmarkName.LEFT_HAND}, new LandmarkName[]{LandmarkName.RIGHT_SHOULDER,LandmarkName.RIGHT_ELBOW}, new LandmarkName[]{LandmarkName.RIGHT_ELBOW,LandmarkName.RIGHT_WRIST}, new LandmarkName[]{LandmarkName.RIGHT_WRIST,LandmarkName.RIGHT_HAND});
         double limbWidth = Math.max(5, scale * .018);
         for (var link : links) {
             var a = frame.landmarks().get(link[0]); var b = frame.landmarks().get(link[1]);
             if (a == null || b == null) continue;
+            if (live && (a.confidence() < DRAW_THRESHOLD || b.confidence() < DRAW_THRESHOLD)) continue;
             var line = new Line(offsetX+a.x()*scale, offsetY+a.y()*scale, offsetX+b.x()*scale, offsetY+b.y()*scale);
             line.setStroke(LIMB); line.setStrokeWidth(limbWidth);
             line.setStrokeLineCap(javafx.scene.shape.StrokeLineCap.ROUND);
@@ -675,6 +715,11 @@ public final class SahaApp extends Application {
         }
         var leftHip=frame.landmarks().get(LandmarkName.LEFT_HIP);var rightHip=frame.landmarks().get(LandmarkName.RIGHT_HIP);
         var leftShoulderPoint=frame.landmarks().get(LandmarkName.LEFT_SHOULDER);var rightShoulderPoint=frame.landmarks().get(LandmarkName.RIGHT_SHOULDER);
+        // a live frame can be missing anything at all, including before the
+        // first inference lands, so the torso is drawn only when it is there
+        if (leftHip == null || rightHip == null || leftShoulderPoint == null || rightShoulderPoint == null) {
+            if (live) return;
+        }
         double spineStartX=offsetX+(leftShoulderPoint.x()+rightShoulderPoint.x())*.5*scale,spineStartY=offsetY+(leftShoulderPoint.y()+rightShoulderPoint.y())*.5*scale;
         double spineEndX=offsetX+(leftHip.x()+rightHip.x())*.5*scale,spineEndY=offsetY+(leftHip.y()+rightHip.y())*.5*scale;
         double sx=spineEndX-spineStartX,sy=spineEndY-spineStartY,length=Math.max(1,Math.hypot(sx,sy));
@@ -683,7 +728,10 @@ public final class SahaApp extends Application {
         spine.setStrokeLineCap(javafx.scene.shape.StrokeLineCap.ROUND);
         spine.setEffect(glow(LIMB.deriveColor(0, 1, 1, .55), limbWidth * 1.6));
         bodyView.getChildren().add(spine);
-        frame.landmarks().entrySet().stream().filter(entry -> entry.getKey() != LandmarkName.NOSE).forEach(entry -> {
+        frame.landmarks().entrySet().stream()
+                .filter(entry -> entry.getKey() != LandmarkName.NOSE)
+                .filter(entry -> !live || entry.getValue().confidence() >= DRAW_THRESHOLD)
+                .forEach(entry -> {
             double radius = switch (entry.getKey()) { case LEFT_HAND,RIGHT_HAND,LEFT_TOE,RIGHT_TOE -> limbWidth * .62; default -> limbWidth * .92; };
             var p = entry.getValue();
             var dot = new Circle(offsetX+p.x()*scale, offsetY+p.y()*scale, radius, JOINT);
@@ -693,6 +741,8 @@ public final class SahaApp extends Application {
         var nose = frame.landmarks().get(LandmarkName.NOSE);
         var leftShoulder = frame.landmarks().get(LandmarkName.LEFT_SHOULDER);
         var rightShoulder = frame.landmarks().get(LandmarkName.RIGHT_SHOULDER);
+        if (nose == null || leftShoulder == null || rightShoulder == null
+                || (live && nose.confidence() < DRAW_THRESHOLD)) return;
         double headRadius = Math.max(20, scale*.052);
         double headCenterX = offsetX + nose.x()*scale;
         double headCenterY = offsetY + nose.y()*scale;
@@ -710,7 +760,9 @@ public final class SahaApp extends Application {
         neck.setStrokeLineCap(javafx.scene.shape.StrokeLineCap.ROUND);
         bodyView.getChildren().addAll(neck, head);
         drawFace(headCenterX, headCenterY, headRadius, landmarks.faceDirection());
-        var label = new Text(18, 28, landmarks.description()); label.setFill(Color.web("#b7c8c5")); bodyView.getChildren().add(label);
+        var label = new Text(18, 28, live ? "Your body · nothing else from the room is drawn" : landmarks.description());
+        label.setFill(Color.web("#b7c8c5"));
+        bodyView.getChildren().add(label);
     }
 
     /** A calm, friendly face: two eyes and a smile, turned the way the pose looks. */
