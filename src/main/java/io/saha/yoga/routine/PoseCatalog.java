@@ -19,7 +19,7 @@ public final class PoseCatalog {
             pose("upward_salute", "Upward Salute", 35, "Sweep both arms overhead and lengthen from your hips.", "Take the arms shoulder-width apart, or stop at shoulder height.",
                     // the reach itself, not the elbow: an arm can be perfectly
                     // straight and still hanging by your side
-                    List.of(reach("overhead-reach", BilateralStrategy.STRAIGHTEST, 120, 180, "Try sweeping your hands higher, until your arms frame your ears."))),
+                    List.of(reach("overhead-reach", BilateralStrategy.STRAIGHTEST, 110, 180, "Try sweeping your arms higher, until they frame your ears."))),
             pose("standing_fold", "Standing Forward Fold", 40, "Hinge from the hips and let your head and arms hang heavy.", "Bend your knees generously or rest your hands on your shins.",
                     // a deep fold closes this angle almost completely, so only
                     // the upper bound carries meaning here
@@ -88,9 +88,17 @@ public final class PoseCatalog {
         return new AlignmentRule(id, first, vertex, third, BilateralStrategy.WORST_MATCH, 0, 180, note, "", 9, false);
     }
 
-    /** The reach itself: the angle at the shoulder between the hip and the wrist. */
+    /**
+     * The reach itself: the angle at the shoulder between the hip and the elbow.
+     *
+     * The elbow rather than the wrist, deliberately. Raising your arms fully
+     * overhead is exactly when your hands leave the top of a webcam's frame, so
+     * a rule that needs the wrist stops measuring at the moment the pose
+     * becomes correct - it reported nothing however high the arms went. The
+     * upper arm carries the same information and stays in shot.
+     */
     private static AlignmentRule reach(String id, BilateralStrategy strategy, double min, double max, String cue) {
-        return new AlignmentRule(id, LandmarkName.LEFT_HIP, LandmarkName.LEFT_SHOULDER, LandmarkName.LEFT_WRIST, strategy, min, max, cue, "", 2, true);
+        return new AlignmentRule(id, LandmarkName.LEFT_HIP, LandmarkName.LEFT_SHOULDER, LandmarkName.LEFT_ELBOW, strategy, min, max, cue, "", 2, true);
     }
     private static Pose pose(String id, String name, int seconds, String instruction, String modification, List<AlignmentRule> rules) {
         return new Pose(id, name, Difficulty.BEGINNER, seconds, List.of(instruction), List.of(modification), FULL, rules, CAUTION);

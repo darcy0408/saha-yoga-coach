@@ -43,6 +43,9 @@ public final class SahaApp extends Application {
     private final RoutineGenerator generator = new RoutineGenerator(catalog);
     private final PoseAnalyzer analyzer = new PoseAnalyzer();
     private final SpokenCoach spoken = new SpokenCoach();
+    private final io.saha.yoga.sound.Chime chime = new io.saha.yoga.sound.Chime();
+    /** So the chime marks the moment a pose comes right, not every frame it stays right. */
+    private boolean wasAligned;
     private Voice voice = Voice.silent();
     private boolean speechWanted = true;
     /** Show the camera as a mirror, which is what people expect of a self view. */
@@ -384,6 +387,7 @@ public final class SahaApp extends Application {
             speechWanted = !speechWanted;
             if (speechWanted && !voice.isAvailable()) voice = SystemVoice.create();
             else if (!speechWanted) { voice.close(); voice = Voice.silent(); }
+            chime.setMuted(!speechWanted);
             speech.setText(speechLabel());
         });
         var controls = new GridPane(); controls.setHgap(10); controls.setVgap(10);
@@ -447,8 +451,11 @@ public final class SahaApp extends Application {
                 suggestionLabel.setText("Primary suggestion: " + (r.suggestions().isEmpty() ? "Keep breathing comfortably." : r.suggestions().getFirst()));
                 spoken.framingResolved();
                 measurementLabel.setText(readMeasurements(r));
+                boolean aligned = r.suggestions().isEmpty() && r.measurements().stream().anyMatch(AnalysisResult.Measurement::inRange);
+                if (aligned && !wasAligned) chime.play();
+                wasAligned = aligned;
                 if (!r.suggestions().isEmpty()) spoken.cue(r.suggestions().getFirst()).ifPresent(voice::say);
-                else if (r.measurements().stream().anyMatch(AnalysisResult.Measurement::inRange)) spoken.praise().ifPresent(voice::say);
+                else if (aligned) spoken.praise().ifPresent(voice::say);
                 optionalLabel.setText("Optional adjustment: " + current().pose().modifications().getFirst());
                 confidenceLabel.setText("Confidence: " + level(r.confidence()) + reading(r.confidence()));
             }
@@ -519,6 +526,7 @@ public final class SahaApp extends Application {
         poseLabel.setText("Current pose: " + item.pose().displayName());
         phaseLabel.setText(item.phase().toUpperCase()); timerLabel.setText(format(remaining));
         spoken.announce(item.pose()).ifPresent(voice::say);
+        wasAligned = false;
         updateTeachingView(item);
         updatePracticePath();
         if (!livePreviewActive) drawFrame(landmarks.nextFrame());
