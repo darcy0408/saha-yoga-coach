@@ -182,28 +182,38 @@ public final class DemoLandmarkSource implements LandmarkSource {
      * practitioner to bend a knee that its own reference had straightened.
      *
      * Placing the ankle directly below the knee keeps the shin vertical, and
-     * the thigh leaves the hip at 25 degrees above horizontal, which closes the
-     * front knee to about 115 degrees - a real lunge, comfortably inside range.
+     * the thigh leaves the hip only 12 degrees above horizontal, which closes
+     * the front knee to about 102 degrees: the thigh is nearly parallel to the
+     * floor, which is the lunge the teaching illustration shows and the depth
+     * this pose has been drawn short of all along. Going deeper necessarily
+     * widens the stance - with the bones a fixed length, hips can only sink by
+     * the feet moving apart.
+     *
+     * The back foot turns out, away from the midline, as the pose asks.
      */
     private void warriorOne(EnumMap<LandmarkName, Landmark> p) {
         // reaching up and slightly apart rather than together: drawn to the
         // midline both arms vanished into the head's own glow, leaving a lit
         // block above the shoulders instead of two arms
         arms(p,.40,.16,.36,.03,.60,.16,.64,.03); hips(p,.46,.50,.54,.50);
-        legs(p,.242,.597,.242,.817,.7236,.6514,.869,.817); toes(p,.202,.886,.917,.881);
+        legs(p,.2250,.5478,.2250,.7678,.7438,.6248,.9117,.7678); toes(p,.169,.825,.9597,.8318);
     }
     /**
      * Virabhadrasana II: the same front knee stacked over its ankle, a wider
      * stance, level arms, and the feet turned the way the pose actually asks -
      * front foot pointing along the gaze, back foot turned in across the mat.
      *
-     * Authored at constrain()'s bone lengths for the reason given on Warrior I.
-     * The back knee carries a degree or two of bend so the straight leg reads
-     * as a leg rather than a ruled line.
+     * Authored at constrain()'s bone lengths, and to the same 102-degree front
+     * knee as Warrior I, for the reasons given there. The back knee carries a
+     * degree or two of bend so the straight leg reads as a leg rather than a
+     * ruled line.
+     *
+     * The feet matter as much as the knee here: the front foot points along the
+     * gaze, and the back foot turns in across the mat.
      */
     private void warriorTwo(EnumMap<LandmarkName, Landmark> p) {
         arms(p,.30,.24,.14,.24,.70,.24,.86,.24); hips(p,.46,.52,.54,.52);
-        legs(p,.2639,.5987,.2639,.8187,.702,.6615,.8566,.8187); toes(p,.208,.876,.905,.755);
+        legs(p,.2550,.5678,.2550,.7878,.7138,.6448,.8817,.7878); toes(p,.195,.8406,.9297,.7238);
     }
     private void triangle(EnumMap<LandmarkName, Landmark> p) {
         at(p,LandmarkName.NOSE,.29,.24); shoulders(p,.32,.35,.39,.31);
@@ -215,16 +225,28 @@ public final class DemoLandmarkSource implements LandmarkSource {
         legs(p,.47,.69,.47,.88,.68,.62,.50,.57); toes(p,.53,.89,.52,.64);
     }
     /**
-     * Tabletop, facing left: wrists stacked under shoulders and shins down, so
-     * both hands and both feet rest on the floor. The arms and shins were
-     * ending short of the ground, leaving the figure hovering above the mat.
+     * Tabletop, facing left: on hands and KNEES, which is the part this was
+     * getting wrong.
+     *
+     * The legs were authored as one straight line from hip to toe, so
+     * constrain() built a leg with a 178-degree knee: a stilt. The figure stood
+     * on its hands and feet with both knees in the air, which is a bear crawl,
+     * not the pose cat-cow is done from - and it is why the shape read as
+     * floating however the feet were moved.
+     *
+     * The thigh now drops vertically to a knee resting on the floor, and the
+     * shin runs backward along the floor to the ankle and toes, so all four
+     * contacts a tabletop actually makes are on it. The arms hang straight from
+     * the shoulders with the hands flat and pointing forward. Arm and thigh are
+     * not the same length, so the back slopes a little toward the hips; that is
+     * these proportions being honest rather than the pose being wrong.
      */
     private void tabletop(EnumMap<LandmarkName, Landmark> p) {
-        at(p,LandmarkName.NOSE,.20,.52); shoulders(p,.31,.58,.33,.60); hips(p,.62,.58,.64,.60);
-        arms(p,.31,.75,.31,.92,.33,.77,.33,.94);
-        at(p,LandmarkName.LEFT_HAND,.30,.955); at(p,LandmarkName.RIGHT_HAND,.32,.955);
-        legs(p,.62,.76,.62,.94,.64,.78,.64,.95);
-        toes(p,.71,.955,.73,.955);
+        at(p,LandmarkName.NOSE,.26,.70); shoulders(p,.3776,.66,.3976,.68); hips(p,.61,.72,.63,.74);
+        arms(p,.3699,.81,.3699,.95,.4053,.845,.4053,.985);
+        at(p,LandmarkName.LEFT_HAND,.30,.9423); at(p,LandmarkName.RIGHT_HAND,.3353,.9777);
+        legs(p,.6059,.95,.83,.9459,.6341,.985,.8541,.9741);
+        toes(p,.91,.9459,.9341,.9741);
     }
     private void lowLunge(EnumMap<LandmarkName, Landmark> p) {
         // Anjaneyasana, facing left: hips sunk to knee height, front shin
@@ -299,12 +321,16 @@ public final class DemoLandmarkSource implements LandmarkSource {
         hips(p,.60,.34,.62,.36); legs(p,.70,.60,.78,.86,.72,.62,.80,.88); toes(p,.83,.94,.85,.95);
     }
     /**
-     * Goddess: a wide stance with the thighs sinking toward parallel, which is
-     * lower than it was drawn - the hips sat barely below standing height.
+     * Goddess: a wide stance with the thighs sunk to parallel with the floor.
+     *
+     * Authored at constrain()'s bone lengths, like the warriors, so the squat
+     * is as deep as it is drawn: the thigh leaves the hip almost level and the
+     * shin drops vertically, which is the shape the pose is named for. Drawn
+     * shallower the hips sat barely below standing height.
      */
     private void goddess(EnumMap<LandmarkName, Landmark> p) {
         at(p,LandmarkName.NOSE,.50,.26); shoulders(p,.42,.38,.58,.38); arms(p,.30,.44,.28,.28,.70,.44,.72,.28);
-        hips(p,.43,.64,.57,.64); legs(p,.26,.70,.26,.94,.74,.70,.74,.94); toes(p,.17,.955,.83,.955);
+        hips(p,.43,.64,.57,.64); legs(p,.2201,.6480,.2201,.8680,.7799,.6480,.7799,.8680); toes(p,.1721,.9320,.8279,.9320);
     }
     private void plank(EnumMap<LandmarkName, Landmark> p) {
         // one long line from heels to crown, supported on the hands

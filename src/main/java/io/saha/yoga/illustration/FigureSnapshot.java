@@ -42,12 +42,13 @@ public final class FigureSnapshot extends Application {
         sourceField.setAccessible(true);
 
         var gallery = new TilePane();
-        gallery.setHgap(14); gallery.setVgap(14); gallery.setPrefColumns(5);
+        gallery.setHgap(14); gallery.setVgap(14); gallery.setPrefColumns(7);
         gallery.setPadding(new Insets(22));
         gallery.setStyle("-fx-background-color: #091817;");
-        // both warriors are here because their lunge depth is the easiest thing
-        // in the demo figure to get wrong and the hardest to see from numbers
-        for (var pose : List.of("chair", "tree", "warrior_one", "warrior_two", "downward_dog")) {
+        // the poses whose shape has been wrong at some point: lunge depth,
+        // squat depth, which way a body faces and whether its hands and feet
+        // reach the floor are all things numbers hide and a picture does not
+        for (var pose : List.of("chair", "cat_cow", "warrior_one", "warrior_two", "goddess", "tree", "downward_dog")) {
             var source = new DemoLandmarkSource();
             source.selectPose(pose);
             sourceField.set(app, source);
@@ -63,7 +64,7 @@ public final class FigureSnapshot extends Application {
             card.setStyle("-fx-background-color: #091817;");
             gallery.getChildren().add(card);
         }
-        var scene = new Scene(gallery, 1620, 380, Color.web("#091817"));
+        var scene = new Scene(gallery, 2260, 380, Color.web("#091817"));
         scene.getStylesheets().add(Objects.requireNonNull(getClass().getResource("/io/saha/yoga/saha.css")).toExternalForm());
         gallery.applyCss(); gallery.layout();
         var snapshot = gallery.snapshot(new SnapshotParameters(), null);
