@@ -83,8 +83,9 @@ public final class TeachingCardSnapshot extends Application {
             body.getChildren().add(artColumn);
         });
         VBox.setVgrow(body, Priority.ALWAYS);
-        var floor = new Label("FLOOR"); floor.setMaxWidth(Double.MAX_VALUE); floor.getStyleClass().add("teaching-floor");
-        var view = new VBox(10, heading, body, floor);
+        // The illustration draws the floor it actually rests on; a second rule
+        // across the whole card sat at a different height and contradicted it.
+        var view = new VBox(10, heading, body);
         view.getStyleClass().add("teaching-view");
         view.setPrefSize(560, 280);
         return view;

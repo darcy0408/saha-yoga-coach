@@ -504,8 +504,9 @@ public final class SahaApp extends Application {
             body.getChildren().add(artColumn);
         });
         VBox.setVgrow(body, Priority.ALWAYS);
-        var floor = new Label("FLOOR"); floor.setMaxWidth(Double.MAX_VALUE); floor.getStyleClass().add("teaching-floor");
-        teachingView.getChildren().addAll(heading, body, floor);
+        // The illustration draws the floor it actually rests on; a second rule
+        // across the whole card sat at a different height and contradicted it.
+        teachingView.getChildren().addAll(heading, body);
     }
     private void updatePracticePath() {
         if (practicePath == null) return;

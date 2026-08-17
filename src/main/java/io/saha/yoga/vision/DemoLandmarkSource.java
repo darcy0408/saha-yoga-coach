@@ -212,12 +212,29 @@ public final class DemoLandmarkSource implements LandmarkSource {
         at(p,LandmarkName.NOSE,.17,.67); shoulders(p,.28,.70,.32,.73); arms(p,.41,.63,.54,.58,.43,.80,.56,.85);
         hips(p,.53,.70,.57,.73); legs(p,.70,.68,.84,.64,.72,.77,.86,.82); toes(p,.90,.63,.92,.82);
     }
+    /**
+     * Sukhasana, front view: sitting bones on the floor, thighs folded out to
+     * the sides with the knees resting low, shins crossed in front.
+     *
+     * The legs must be authored folding roughly HORIZONTALLY, not hanging.
+     * constrain() rebuilds each leg outward from the hip at standing bone
+     * lengths (.23 thigh, .22 shin, .08 foot), so authoring the knee and ankle
+     * below the hip pushes most of a leg beneath the pelvis. ground() then
+     * rests the lowest point on the floor, which leaves the seat hovering a
+     * thigh's length above it - the figure sits on a chair that is not there.
+     * Folding the chain sideways keeps every bone length identical while
+     * putting the hips, ankles and toes all within a few hundredths of the
+     * floor, and leaves the knees just above it, which is where they belong.
+     */
     private void easySeat(EnumMap<LandmarkName, Landmark> p, boolean reaching) {
-        // cross-legged, sitting bones down, shins folded in front
         at(p,LandmarkName.NOSE,.50,.42); shoulders(p,.43,.54,.57,.54);
-        hips(p,.46,.79,.54,.79); legs(p,.34,.86,.47,.92,.66,.86,.53,.92); toes(p,.42,.95,.58,.95);
-        if (reaching) arms(p,.38,.60,.44,.44,.62,.66,.66,.80);
-        else arms(p,.38,.66,.44,.78,.62,.66,.56,.78);
+        hips(p,.46,.93,.54,.93); legs(p,.22,.91,.44,.93,.78,.91,.56,.93); toes(p,.52,.935,.48,.935);
+        // Seating the hips drops the shoulders with them, so the arms are
+        // re-authored against the seated shoulder height: the old coordinates
+        // were written for a torso that started a third of the frame higher and
+        // now read as pointing upward.
+        if (reaching) arms(p,.38,.54,.44,.42,.66,.82,.79,.87);
+        else arms(p,.34,.82,.21,.87,.66,.82,.79,.87);
     }
     private void headToKnee(EnumMap<LandmarkName, Landmark> p) {
         // one leg long, the other folded in, torso hinged over the long leg

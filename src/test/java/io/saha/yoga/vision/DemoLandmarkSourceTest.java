@@ -100,6 +100,42 @@ class DemoLandmarkSourceTest {
         assertTrue(fold.get(LandmarkName.LEFT_TOE).y() < fold.get(LandmarkName.LEFT_ANKLE).y(), "feet stay flexed toward the ceiling");
     }
 
+    /**
+     * The seat is the contact these poses stand on, and nothing else checks it.
+     *
+     * everyPoseRestsOnTheFloorReference() only asserts that the LOWEST point
+     * touches the floor, which a cross-legged figure satisfied while its pelvis
+     * floated a thigh's length up - a chair that is not there. Naming the hips
+     * is what makes that visible.
+     */
+    @Test void crossLeggedPosesRestTheirSeatOnTheFloor() {
+        var source = new DemoLandmarkSource();
+        for (var id : new String[]{"easy_seat", "seated_side_reach", "seated_twist"}) {
+            source.selectPose(id);
+            var p = source.targetFrame().landmarks();
+            assertEquals(LandmarkSource.FLOOR_Y, p.get(LandmarkName.LEFT_HIP).y(), .04, id + " left sitting bone is off the floor");
+            assertEquals(LandmarkSource.FLOOR_Y, p.get(LandmarkName.RIGHT_HIP).y(), .04, id + " right sitting bone is off the floor");
+            // the shins fold in front rather than hanging: both knees stay out
+            // wider than the hips, and no lower than the seat they fold from
+            assertTrue(p.get(LandmarkName.LEFT_KNEE).x() < p.get(LandmarkName.LEFT_HIP).x() - .10, id + " left knee should splay out from the hip");
+            assertTrue(p.get(LandmarkName.RIGHT_KNEE).x() > p.get(LandmarkName.RIGHT_HIP).x() + .10, id + " right knee should splay out from the hip");
+            assertTrue(p.get(LandmarkName.LEFT_KNEE).y() <= p.get(LandmarkName.LEFT_HIP).y(), id + " left knee should not sink below the seat");
+            assertTrue(p.get(LandmarkName.RIGHT_KNEE).y() <= p.get(LandmarkName.RIGHT_HIP).y(), id + " right knee should not sink below the seat");
+            // hands belong on or above the knees, never planted through the floor
+            assertTrue(p.get(LandmarkName.LEFT_HAND).y() < LandmarkSource.FLOOR_Y, id + " left hand sank to the floor");
+            assertTrue(p.get(LandmarkName.RIGHT_HAND).y() < LandmarkSource.FLOOR_Y, id + " right hand sank to the floor");
+        }
+    }
+
+    /** The side reach is the one cross-legged pose with an arm overhead. */
+    @Test void theSeatedSideReachActuallyReachesOverhead() {
+        var source = new DemoLandmarkSource();
+        source.selectPose("seated_side_reach");
+        var p = source.targetFrame().landmarks();
+        assertTrue(p.get(LandmarkName.LEFT_HAND).y() < p.get(LandmarkName.NOSE).y(), "the reaching hand rises past the head");
+        assertTrue(p.get(LandmarkName.RIGHT_HAND).y() > p.get(LandmarkName.RIGHT_SHOULDER).y(), "the other hand stays down");
+    }
+
     @Test void upwardSaluteStandsOnBothFeet() {
         var source = new DemoLandmarkSource();
         source.selectPose("upward_salute");

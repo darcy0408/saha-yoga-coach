@@ -50,7 +50,6 @@
 .visual-review-warning { -fx-background-color: #fff2ca; -fx-background-radius: 8; -fx-padding: 10; -fx-text-fill: #493a16; -fx-font-weight: 700; }
 .visual-approved { -fx-background-color: #d8efe8; -fx-background-radius: 8; -fx-padding: 10; -fx-text-fill: #173532; -fx-font-weight: 700; }
 .support-label { -fx-font-size: 12px; -fx-text-fill: #53625e; -fx-font-weight: 700; }
-.teaching-floor { -fx-border-color: #725b25 transparent transparent transparent; -fx-border-width: 3 0 0 0; -fx-padding: 5 0 0 0; -fx-font-size: 10px; -fx-font-weight: 700; -fx-text-fill: #725b25; }
 .camera-observation { -fx-background-color: #091817; -fx-background-radius: 14; -fx-border-color: #315a54; -fx-border-radius: 14; -fx-border-width: 2; }
 .observation-title { -fx-font-size: 10px; -fx-font-weight: 700; -fx-text-fill: #b7c8c5; }
 .pose-draft-card { -fx-background-color: #f5efe1; -fx-background-radius: 16; -fx-padding: 16; -fx-border-color: #d6c79e; -fx-border-radius: 16; -fx-border-width: 2; }
