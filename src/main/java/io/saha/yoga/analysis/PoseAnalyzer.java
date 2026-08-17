@@ -41,7 +41,17 @@ public final class PoseAnalyzer {
             var points = frame.landmarks();
             var primary = Geometry.angleDegrees(points.get(rule.first()), points.get(rule.vertex()), points.get(rule.third()));
             var mirrored = Geometry.angleDegrees(points.get(mirror(rule.first())), points.get(mirror(rule.vertex())), points.get(mirror(rule.third())));
-            return new Evaluation(rule, select(rule, primary, mirrored));
+            // A limb the camera cannot see still produces coordinates, and
+            // therefore an angle - one built from guesses. Standing side-on
+            // hides the far leg, and letting its invented angle win the
+            // comparison is how a correctly bent knee got told to bend further.
+            boolean seePrimary = frame.minimumConfidence(List.of(rule.first(), rule.vertex(), rule.third())) >= RELIABILITY_THRESHOLD;
+            boolean seeMirrored = frame.minimumConfidence(List.of(mirror(rule.first()), mirror(rule.vertex()), mirror(rule.third()))) >= RELIABILITY_THRESHOLD;
+            double angle = seePrimary && seeMirrored ? select(rule, primary, mirrored)
+                    : seePrimary ? primary
+                    : seeMirrored ? mirrored
+                    : select(rule, primary, mirrored);
+            return new Evaluation(rule, angle);
         }).toList();
         var measurements = evaluations.stream()
                 .map(e -> new AnalysisResult.Measurement(e.rule.label(), e.angle,
@@ -50,7 +60,7 @@ public final class PoseAnalyzer {
         var misses = evaluations.stream()
                 .filter(e -> e.rule.graded())
                 .filter(e -> e.angle < e.rule.minimumDegrees() || e.angle > e.rule.maximumDegrees())
-                .sorted(Comparator.comparingInt(e -> e.rule.priority())).limit(2).map(e -> e.rule.suggestion()).toList();
+                .sorted(Comparator.comparingInt(e -> e.rule.priority())).limit(2).map(e -> e.rule.suggestionFor(e.angle)).toList();
         boolean anyGraded = evaluations.stream().anyMatch(e -> e.rule.graded());
         String status = !misses.isEmpty() ? "Almost aligned"
                 : anyGraded ? "Aligned — hold and breathe"
@@ -105,7 +115,9 @@ public final class PoseAnalyzer {
         if (weak.isEmpty()) return "Hold still for a moment so the view can settle.";
         String parts = weak.size() == 1 ? weak.getFirst()
                 : String.join(", ", weak.subList(0, weak.size() - 1)) + " and " + weak.getLast();
-        return "Your " + parts + " are out of view. Adjust the camera or turn side-on, and this resumes on its own.";
+        // "resumes" is read aloud by the speech engine as "res-oo-mays", so the
+        // wording avoids it rather than making the coach mispronounce itself
+        return "Your " + parts + " are out of view. Adjust the camera or turn side-on, and coaching will pick up again on its own.";
     }
 
     private static String readable(LandmarkName name) {

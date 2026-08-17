@@ -448,6 +448,7 @@ public final class SahaApp extends Application {
                 spoken.framingResolved();
                 measurementLabel.setText(readMeasurements(r));
                 if (!r.suggestions().isEmpty()) spoken.cue(r.suggestions().getFirst()).ifPresent(voice::say);
+                else if (r.measurements().stream().anyMatch(AnalysisResult.Measurement::inRange)) spoken.praise().ifPresent(voice::say);
                 optionalLabel.setText("Optional adjustment: " + current().pose().modifications().getFirst());
                 confidenceLabel.setText("Confidence: " + level(r.confidence()) + reading(r.confidence()));
             }
@@ -468,7 +469,22 @@ public final class SahaApp extends Application {
             }
         }
         if (!paused && mayTime && ++clockTicks % 10 == 0 && --remaining <= 0) advance(false);
+        callTheChangeOfSides();
         timerLabel.setText(format(remaining) + (paused || !mayTime ? " · paused" : ""));
+    }
+
+    /**
+     * Halfway through a one-sided pose, say so.
+     *
+     * The routine holds each of these once, so without this the practice works
+     * one leg and leaves the other. The check is an equality on the second it
+     * crosses the midpoint, which happens once per hold.
+     */
+    private void callTheChangeOfSides() {
+        if (routine == null || !catalog.isOneSided(current().pose().id())) return;
+        if (remaining != current().durationSeconds() / 2) return;
+        spoken.switchSides().ifPresent(voice::say);
+        optionalLabel.setText("Switch sides — the second half of this hold works the other side.");
     }
     /**
      * The angles measured this frame, with their targets.
@@ -743,13 +759,20 @@ public final class SahaApp extends Application {
             bodyView.getChildren().add(floorLabel);
         }
         final double offsetY = top;
+        // A live figure is mirrored, so the arm you raise is the arm that rises
+        // on screen. The demo figure already faces you and needs no flip. The
+        // camera overlay always mirrored; this is that same rule applied to the
+        // figure that replaced it.
+        final boolean flip = live && mirrorPreview;
+        final java.util.function.DoubleUnaryOperator mapX =
+                value -> flip ? offsetX + scale - value * scale : offsetX + value * scale;
         var links = List.of(new LandmarkName[]{LandmarkName.LEFT_SHOULDER,LandmarkName.RIGHT_SHOULDER}, new LandmarkName[]{LandmarkName.LEFT_HIP,LandmarkName.RIGHT_HIP}, new LandmarkName[]{LandmarkName.LEFT_HIP,LandmarkName.LEFT_KNEE}, new LandmarkName[]{LandmarkName.LEFT_KNEE,LandmarkName.LEFT_ANKLE}, new LandmarkName[]{LandmarkName.LEFT_ANKLE,LandmarkName.LEFT_TOE}, new LandmarkName[]{LandmarkName.RIGHT_HIP,LandmarkName.RIGHT_KNEE}, new LandmarkName[]{LandmarkName.RIGHT_KNEE,LandmarkName.RIGHT_ANKLE}, new LandmarkName[]{LandmarkName.RIGHT_ANKLE,LandmarkName.RIGHT_TOE}, new LandmarkName[]{LandmarkName.LEFT_SHOULDER,LandmarkName.LEFT_ELBOW}, new LandmarkName[]{LandmarkName.LEFT_ELBOW,LandmarkName.LEFT_WRIST}, new LandmarkName[]{LandmarkName.LEFT_WRIST,LandmarkName.LEFT_HAND}, new LandmarkName[]{LandmarkName.RIGHT_SHOULDER,LandmarkName.RIGHT_ELBOW}, new LandmarkName[]{LandmarkName.RIGHT_ELBOW,LandmarkName.RIGHT_WRIST}, new LandmarkName[]{LandmarkName.RIGHT_WRIST,LandmarkName.RIGHT_HAND});
         double limbWidth = Math.max(5, scale * .018);
         for (var link : links) {
             var a = frame.landmarks().get(link[0]); var b = frame.landmarks().get(link[1]);
             if (a == null || b == null) continue;
             if (live && (a.confidence() < DRAW_THRESHOLD || b.confidence() < DRAW_THRESHOLD)) continue;
-            var line = new Line(offsetX+a.x()*scale, offsetY+a.y()*scale, offsetX+b.x()*scale, offsetY+b.y()*scale);
+            var line = new Line(mapX.applyAsDouble(a.x()), offsetY+a.y()*scale, mapX.applyAsDouble(b.x()), offsetY+b.y()*scale);
             line.setStroke(LIMB); line.setStrokeWidth(limbWidth);
             line.setStrokeLineCap(javafx.scene.shape.StrokeLineCap.ROUND);
             line.setEffect(glow(LIMB.deriveColor(0, 1, 1, .55), limbWidth * 1.6));
@@ -762,10 +785,11 @@ public final class SahaApp extends Application {
         if (leftHip == null || rightHip == null || leftShoulderPoint == null || rightShoulderPoint == null) {
             if (live) return;
         }
-        double spineStartX=offsetX+(leftShoulderPoint.x()+rightShoulderPoint.x())*.5*scale,spineStartY=offsetY+(leftShoulderPoint.y()+rightShoulderPoint.y())*.5*scale;
-        double spineEndX=offsetX+(leftHip.x()+rightHip.x())*.5*scale,spineEndY=offsetY+(leftHip.y()+rightHip.y())*.5*scale;
+        double spineStartX=mapX.applyAsDouble((leftShoulderPoint.x()+rightShoulderPoint.x())*.5),spineStartY=offsetY+(leftShoulderPoint.y()+rightShoulderPoint.y())*.5*scale;
+        double spineEndX=mapX.applyAsDouble((leftHip.x()+rightHip.x())*.5),spineEndY=offsetY+(leftHip.y()+rightHip.y())*.5*scale;
         double sx=spineEndX-spineStartX,sy=spineEndY-spineStartY,length=Math.max(1,Math.hypot(sx,sy));
-        var spine=new QuadCurve(spineStartX,spineStartY,(spineStartX+spineEndX)/2-(sy/length)*landmarks.spineBend()*scale,(spineStartY+spineEndY)/2+(sx/length)*landmarks.spineBend()*scale,spineEndX,spineEndY);
+        double bend = live ? liveSpineBend(frame) : landmarks.spineBend();
+        var spine=new QuadCurve(spineStartX,spineStartY,(spineStartX+spineEndX)/2-(sy/length)*bend*scale,(spineStartY+spineEndY)/2+(sx/length)*bend*scale,spineEndX,spineEndY);
         spine.setFill(Color.TRANSPARENT); spine.setStroke(LIMB); spine.setStrokeWidth(limbWidth * 1.15);
         spine.setStrokeLineCap(javafx.scene.shape.StrokeLineCap.ROUND);
         spine.setEffect(glow(LIMB.deriveColor(0, 1, 1, .55), limbWidth * 1.6));
@@ -776,7 +800,7 @@ public final class SahaApp extends Application {
                 .forEach(entry -> {
             double radius = switch (entry.getKey()) { case LEFT_HAND,RIGHT_HAND,LEFT_TOE,RIGHT_TOE -> limbWidth * .62; default -> limbWidth * .92; };
             var p = entry.getValue();
-            var dot = new Circle(offsetX+p.x()*scale, offsetY+p.y()*scale, radius, JOINT);
+            var dot = new Circle(mapX.applyAsDouble(p.x()), offsetY+p.y()*scale, radius, JOINT);
             dot.setEffect(glow(JOINT, radius * 2.6));
             bodyView.getChildren().add(dot);
         });
@@ -786,14 +810,14 @@ public final class SahaApp extends Application {
         if (nose == null || leftShoulder == null || rightShoulder == null
                 || (live && nose.confidence() < DRAW_THRESHOLD)) return;
         double headRadius = Math.max(20, scale*.052);
-        double headCenterX = offsetX + nose.x()*scale;
+        double headCenterX = mapX.applyAsDouble(nose.x());
         double headCenterY = offsetY + nose.y()*scale;
         double headRadiusX=headRadius*.84, headRadiusY=headRadius*1.08;
         var head = new Ellipse(headCenterX, headCenterY, headRadiusX, headRadiusY);
         head.setFill(SKIN);
         head.setStroke(INK); head.setStrokeWidth(Math.max(4, scale * .014));
         head.setEffect(glow(JOINT.deriveColor(0, 1, 1, .5), headRadius * .9));
-        double shoulderX = offsetX+((leftShoulder.x()+rightShoulder.x())/2)*scale;
+        double shoulderX = mapX.applyAsDouble((leftShoulder.x()+rightShoulder.x())/2);
         double shoulderY = offsetY+((leftShoulder.y()+rightShoulder.y())/2)*scale;
         double dx=shoulderX-headCenterX,dy=shoulderY-headCenterY;
         double boundaryScale=1/Math.sqrt((dx*dx)/(headRadiusX*headRadiusX)+(dy*dy)/(headRadiusY*headRadiusY));
@@ -807,12 +831,43 @@ public final class SahaApp extends Application {
         bodyView.getChildren().add(label);
     }
 
+    /**
+     * How far to bow the drawn spine for a live body.
+     *
+     * MoveNet has no mid-back keypoint, so the arch itself cannot be measured.
+     * What it does give is the head, and in cat-cow the head leads the spine:
+     * it tucks under as the back rounds and lifts as the back dips. Bowing the
+     * curve toward whichever side of the shoulder-hip line the head has moved
+     * to therefore follows the real movement, even though it is inferred from
+     * the head rather than seen in the back.
+     */
+    private double liveSpineBend(LandmarkFrame frame) {
+        var points = frame.landmarks();
+        var nose = points.get(LandmarkName.NOSE);
+        var leftShoulder = points.get(LandmarkName.LEFT_SHOULDER);
+        var rightShoulder = points.get(LandmarkName.RIGHT_SHOULDER);
+        var leftHip = points.get(LandmarkName.LEFT_HIP);
+        var rightHip = points.get(LandmarkName.RIGHT_HIP);
+        if (nose == null || leftShoulder == null || rightShoulder == null || leftHip == null || rightHip == null) return 0;
+        if (nose.confidence() < DRAW_THRESHOLD) return 0;
+        double shoulderX = (leftShoulder.x() + rightShoulder.x()) / 2, shoulderY = (leftShoulder.y() + rightShoulder.y()) / 2;
+        double hipX = (leftHip.x() + rightHip.x()) / 2, hipY = (leftHip.y() + rightHip.y()) / 2;
+        double axisX = shoulderX - hipX, axisY = shoulderY - hipY;
+        double axisLength = Math.hypot(axisX, axisY);
+        if (axisLength < 1e-6) return 0;
+        // signed perpendicular distance of the head from the spine's own axis,
+        // measured in torso lengths so it does not change with distance
+        double offX = nose.x() - shoulderX, offY = nose.y() - shoulderY;
+        double sideways = (axisX * offY - axisY * offX) / axisLength / axisLength;
+        return Math.max(-.09, Math.min(.09, sideways * .35));
+    }
+
     /** A calm, friendly face: two eyes and a smile, turned the way the pose looks. */
     private void drawFace(double x, double y, double radius, FaceDirection direction) {
         double stroke = Math.max(2, radius * .11);
         if (direction == FaceDirection.FRONT || direction == FaceDirection.UP) {
-            var left = new Circle(x - radius * .30, y - radius * .16, Math.max(2, radius * .10), INK);
-            var right = new Circle(x + radius * .30, y - radius * .16, Math.max(2, radius * .10), INK);
+            var left = eye(x - radius * .30, y - radius * .16, radius);
+            var right = eye(x + radius * .30, y - radius * .16, radius);
             bodyView.getChildren().addAll(left, right, smile(x, y + radius * .10, radius * .46, stroke, 200, 140));
             return;
         }
@@ -820,11 +875,18 @@ public final class SahaApp extends Application {
         // toward whatever the pose is looking at
         double vx = direction == FaceDirection.LEFT ? -1 : direction == FaceDirection.RIGHT ? 1 : 0;
         double vy = direction == FaceDirection.DOWN ? 1 : 0;
-        var eye = new Circle(x + vx * radius * .26 - vy * radius * .12,
-                y + vy * radius * .26 + Math.abs(vx) * radius * .10, Math.max(2, radius * .10), INK);
+        var eye = eye(x + vx * radius * .26 - vy * radius * .12,
+                y + vy * radius * .26 + Math.abs(vx) * radius * .10, radius);
         double startAngle = vx < 0 ? 250 : vx > 0 ? 110 : 200;
         bodyView.getChildren().addAll(eye,
                 smile(x + vx * radius * .16, y + radius * .12 + vy * radius * .10, radius * .40, stroke, startAngle, 110));
+    }
+
+    /** The face carries the same warm light as the joints, so it reads as lit rather than stamped on. */
+    private Circle eye(double x, double y, double headRadius) {
+        var dot = new Circle(x, y, Math.max(2, headRadius * .10), INK);
+        dot.setEffect(glow(JOINT, headRadius * .34));
+        return dot;
     }
 
     private javafx.scene.shape.Arc smile(double x, double y, double radius, double stroke, double start, double extent) {
@@ -834,6 +896,7 @@ public final class SahaApp extends Application {
         arc.setStroke(INK);
         arc.setStrokeWidth(stroke);
         arc.setStrokeLineCap(javafx.scene.shape.StrokeLineCap.ROUND);
+        arc.setEffect(glow(JOINT, radius * .5));
         return arc;
     }
 

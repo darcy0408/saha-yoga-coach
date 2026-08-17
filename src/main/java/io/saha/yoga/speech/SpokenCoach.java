@@ -31,7 +31,17 @@ public final class SpokenCoach {
      */
     static final long FRAMING_GAP_NANOS = 45_000_000_000L;
 
+    /** Long enough that encouragement stays encouragement. */
+    static final long PRAISE_GAP_NANOS = 25_000_000_000L;
+    private static final String[] PRAISE = {
+            "Great — that is the shape.",
+            "Lovely. Hold it there.",
+            "That is it. Keep breathing.",
+            "Nice and steady."
+    };
+
     private final LongSupplier clock;
+    private int praiseIndex;
     private String lastLine;
     // a flag rather than a sentinel timestamp: nanoTime may be negative, and
     // subtracting a sentinel from it overflows and suppresses the first cue
@@ -75,6 +85,25 @@ public final class SpokenCoach {
 
     /** Re-arms the framing warning once the camera can see enough again. */
     public void framingResolved() { nagged = false; }
+
+    /**
+     * Occasional praise while a measured pose is holding inside its range.
+     *
+     * A coach that only ever speaks to correct you is one you stop wanting to
+     * hear. This waits out a long gap so it lands as encouragement rather than
+     * chatter, and it cycles the wording so the same word is not repeated back
+     * at you all practice.
+     */
+    public Optional<String> praise() {
+        if (hasSpoken && clock.getAsLong() - lastAt < PRAISE_GAP_NANOS) return Optional.empty();
+        var line = PRAISE[praiseIndex++ % PRAISE.length];
+        return emit(line);
+    }
+
+    /** Said once at the midpoint of a pose that should be done on both sides. */
+    public Optional<String> switchSides() {
+        return emit("Switch sides.");
+    }
 
     /** Said once when the practice ends. */
     public Optional<String> finish(boolean completed) {

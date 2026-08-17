@@ -67,7 +67,25 @@ class PoseAnalyzerTest {
                 new PoseAnalyzer().analyze(pose, new LandmarkFrame(Instant.now(), changed)));
 
         assertEquals("Almost aligned", result.status());
-        assertEquals(List.of("Try a smaller knee bend and keep your knees tracking toward your toes."), result.suggestions());
+        // moving the knee back straightens the leg, so the cue must ask for
+        // more bend. The single cue this rule used to carry said the opposite.
+        assertEquals(List.of("Try sitting your hips back a little further, knees tracking toward your toes."), result.suggestions());
+    }
+
+    @Test void goingPastTheRangeIsCorrectedTheOtherWay() {
+        var source = new DemoLandmarkSource();
+        var pose = new PoseCatalog().require("chair");
+        source.selectPose(pose.id());
+        var changed = new EnumMap<>(source.targetFrame().landmarks());
+        var knee = changed.get(LandmarkName.LEFT_KNEE);
+        // forward and down: a knee already deeper than the pose asks for
+        changed.put(LandmarkName.LEFT_KNEE, new Landmark(knee.x() + .16, knee.y() - .10, knee.confidence()));
+
+        var result = assertInstanceOf(AnalysisResult.Reliable.class,
+                new PoseAnalyzer().analyze(pose, new LandmarkFrame(Instant.now(), changed)));
+        assertFalse(result.suggestions().isEmpty(), "a knee past the range should still be cued");
+        assertTrue(result.suggestions().getFirst().contains("deeper than this pose needs"),
+                "a body past the range must not be told to go further: " + result.suggestions().getFirst());
     }
 
     @Test void measuredReferencesRemainValidWhenLeftAndRightAreSwapped() {
