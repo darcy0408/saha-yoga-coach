@@ -56,6 +56,34 @@ class DemoLandmarkSourceTest {
         assertEquals(triangle.get(LandmarkName.LEFT_HAND).x(),triangle.get(LandmarkName.LEFT_KNEE).x(),.10,"lower hand reaches toward shin");
     }
 
+    @Test void callingTheChangeOfSidesTurnsTheTargetAround() {
+        var source = new DemoLandmarkSource();
+        source.selectPose("warrior_two");
+        var first = source.targetFrame().landmarks();
+        source.switchSides();
+        var second = source.targetFrame().landmarks();
+        // the knee that was bent is now the other knee, in the mirrored place
+        assertEquals(1 - first.get(LandmarkName.LEFT_KNEE).x(), second.get(LandmarkName.RIGHT_KNEE).x(), 1e-9,
+                "the bent front knee should change sides");
+        assertEquals(first.get(LandmarkName.LEFT_KNEE).y(), second.get(LandmarkName.RIGHT_KNEE).y(), 1e-9,
+                "switching sides should not change height");
+        assertEquals(1 - first.get(LandmarkName.LEFT_TOE).x(), second.get(LandmarkName.RIGHT_TOE).x(), 1e-9,
+                "the feet turn around with the legs");
+        source.switchSides();
+        assertEquals(first.get(LandmarkName.LEFT_KNEE).x(), source.targetFrame().landmarks().get(LandmarkName.LEFT_KNEE).x(), 1e-9,
+                "switching back should return the pose it started from");
+    }
+
+    @Test void aNewPoseStartsOnTheSideItWasAuthoredOn() {
+        var source = new DemoLandmarkSource();
+        source.selectPose("warrior_two");
+        var authored = source.targetFrame().landmarks().get(LandmarkName.LEFT_KNEE).x();
+        source.switchSides();
+        source.selectPose("warrior_two");
+        assertEquals(authored, source.targetFrame().landmarks().get(LandmarkName.LEFT_KNEE).x(), 1e-9,
+                "a mirrored hold should not leak into the next pose");
+    }
+
     @Test void everyPoseRestsOnTheFloorReference() {
         var source = new DemoLandmarkSource();
         for (var pose : new PoseCatalog().all()) {

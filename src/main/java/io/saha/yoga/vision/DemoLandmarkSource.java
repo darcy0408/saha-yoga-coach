@@ -14,14 +14,49 @@ public final class DemoLandmarkSource implements LandmarkSource {
     private EnumMap<LandmarkName, Landmark> target;
     private long transitionStarted;
     private FaceDirection facing = FaceDirection.FRONT;
+    private boolean mirrored;
     @Override public void selectPose(String poseId) {
         String previousPose = this.poseId;
         transitionFrom = displayed == null ? build(this.poseId) : new EnumMap<>(displayed);
         this.poseId = poseId;
-        facing = facingFor(poseId);
+        // each pose starts on the side it was authored on
+        mirrored = false;
+        facing = facingNow();
         target = build(poseId);
         transitionWaypoint = crossesFloorBoundary(previousPose,poseId) ? forwardFold() : null;
         transitionStarted = System.nanoTime();
+    }
+
+    /**
+     * Turns the pose around for the second half of a one-sided hold.
+     *
+     * The coach calls the change of sides at the midpoint, and until now the
+     * shape to move into went on showing the first side - so the guide was
+     * asking for the leg that had just finished. It moves across rather than
+     * jumping, because the body following it has to move across too.
+     */
+    public void switchSides() {
+        mirrored = !mirrored;
+        transitionFrom = displayed == null ? build(poseId) : new EnumMap<>(displayed);
+        facing = facingNow();
+        target = build(poseId);
+        transitionWaypoint = null;
+        transitionStarted = System.nanoTime();
+    }
+
+    /**
+     * Reflects a pose about the centre line.
+     *
+     * Both halves are needed: the coordinates flip so the shape faces the other
+     * way, and the names swap with them so a left knee stays the knee on the
+     * body's left. Flipping coordinates alone would leave every rule measuring
+     * the wrong leg.
+     */
+    private void mirror(EnumMap<LandmarkName, Landmark> points) {
+        var flipped = new EnumMap<LandmarkName, Landmark>(LandmarkName.class);
+        points.forEach((name, mark) -> flipped.put(name.mirrored(), new Landmark(1 - mark.x(), mark.y(), mark.confidence())));
+        points.clear();
+        points.putAll(flipped);
     }
     @Override public LandmarkFrame nextFrame() {
         if (target == null) target = build(poseId);
@@ -67,6 +102,7 @@ public final class DemoLandmarkSource implements LandmarkSource {
         }
         constrain(points, facingFor(id));
         ground(points);
+        if (mirrored) mirror(points);
         return points;
     }
 
@@ -101,6 +137,16 @@ public final class DemoLandmarkSource implements LandmarkSource {
     @Override public boolean isTransitioning() { return target != null && (System.nanoTime()-transitionStarted) < 5_000_000_000L; }
     @Override public FaceDirection faceDirection() { return facing; }
     public LandmarkFrame targetFrame() { return new LandmarkFrame(Instant.now(), target == null ? build(poseId) : target); }
+    /** Which way the body faces once any mirroring is taken into account. */
+    private FaceDirection facingNow() {
+        var authored = facingFor(poseId);
+        if (!mirrored) return authored;
+        return switch (authored) {
+            case LEFT -> FaceDirection.RIGHT;
+            case RIGHT -> FaceDirection.LEFT;
+            default -> authored;
+        };
+    }
     private FaceDirection facingFor(String id) { return switch(id) {
         case "warrior_two" -> FaceDirection.LEFT;
         case "cat_cow", "downward_dog", "plank", "standing_fold" -> FaceDirection.DOWN;

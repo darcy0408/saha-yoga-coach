@@ -498,6 +498,9 @@ public final class SahaApp extends Application {
         if (routine == null || !catalog.isOneSided(current().pose().id())) return;
         if (remaining != current().durationSeconds() / 2) return;
         spoken.switchSides().ifPresent(voice::say);
+        // the shape to move into turns around too: it was still showing the
+        // side that had just finished, so it asked for the leg you were leaving
+        demoSource.switchSides();
         optionalLabel.setText("Switch sides — the second half of this hold works the other side.");
     }
     /**
