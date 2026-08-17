@@ -83,14 +83,16 @@ Normal operation saves no video, images, face data, landmark coordinates, identi
 
 ## Known limitations
 
-- Camera coaching has not yet been validated against a person holding each pose, so its cues should be read as plausible rather than proven.
+- Camera coaching has been walked through pose by pose against one person, on one Windows machine, in one room, on the last day of the entry period. That pass found and fixed real faults — a lunge shallower than its own rule, a leg hidden behind another leg overruling the leg in plain view, arms measured at a joint that leaves the frame. It is not a validation study: one body, one camera height, one set of proportions and one light source.
+- Standing poses are the best supported. Poses done on the floor are the least: the pose model is trained on upright people, so a body lying or sitting on the mat scores low enough that coaching often declines to speak rather than guess. Bridge, Cat–Cow and Head to Knee are the ones to treat as unproven.
+- The model stops tracking wrists once they rise above the head, whatever the camera distance or angle, so overhead reach is measured at the elbow and the hands are not drawn while they are up there.
 - Without the model present the app falls back to synthetic demo landmarks, which prove workflow and analysis behaviour, not model accuracy.
 - Spoken guidance uses the Windows speech engine; other platforms fall back to silence rather than a second-rate voice.
 - Alignment rules cover a reliable subset; some poses provide instruction and confidence checks without geometric correction.
 - Single-view 2D angles cannot resolve depth or guarantee alignment or safety.
 - Spoken guidance uses whichever voice Windows has installed; the stock desktop voices sound dated, and adding a natural voice in Settings improves it considerably.
 - Multiple routine modes and a full accessibility audit remain future work.
-- Live camera behavior still needs a device-specific Windows smoke test even though the Java 26 build is verified.
+- What this most needs next is other people: a range of bodies, rooms and cameras, and someone who teaches yoga checking the ranges against what they would actually say in a class.
 
 ## Three-minute demonstration
 

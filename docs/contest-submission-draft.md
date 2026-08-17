@@ -181,9 +181,17 @@ Consent, continue to camera setup, enable the camera, and start Steady Start.
 
 ### What's next
 
-Validate each measured pose on camera against people actually holding it, across
-varied bodies, rooms, and lighting, and widen the rules beyond knee angles once
-that evidence exists. Then a full accessibility audit, and floor poses — the
+The last day was spent in front of the camera, walking the practice pose by
+pose, and it earned its keep: a Warrior lunge shallower than the rule it was
+teaching, a leg hidden behind another leg overruling the leg in plain view, a
+reach measured at a joint that leaves the frame the moment the arms go up. Each
+one is fixed and covered by a test. That is one person, one room, one camera
+height and one set of proportions — enough to find real faults, not enough to
+call anything validated, and the honest place to start is saying so.
+
+So: validate each measured pose on camera against people actually holding it,
+across varied bodies, rooms, and lighting, and widen the rules beyond knee
+angles once that evidence exists. Then a full accessibility audit, and floor poses — the
 weakest case for a single-camera model — *earning* measurement rather than being
 handed it. The pattern is deliberate: this coach adds a claim only after it can
 back it.
