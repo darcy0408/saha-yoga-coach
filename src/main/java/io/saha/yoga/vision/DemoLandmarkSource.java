@@ -235,14 +235,21 @@ public final class DemoLandmarkSource implements LandmarkSource {
      * widens the stance - with the bones a fixed length, hips can only sink by
      * the feet moving apart.
      *
-     * The back foot turns out, away from the midline, as the pose asks.
+     * Both feet lie flat along the floor: the foot runs level from the ankle
+     * rather than dropping below it. Angled down, the only landmark below the
+     * ankle is the toe, and the figure reads as standing on tiptoe - which is
+     * not what this pose asks of a back heel that should be planted.
+     *
+     * The stance is centred on the frame rather than on the hips. A lunge this
+     * deep is wide, and hung symmetrically about the hips it put the back foot
+     * through the edge of the picture.
      */
     private void warriorOne(EnumMap<LandmarkName, Landmark> p) {
         // reaching up and slightly apart rather than together: drawn to the
         // midline both arms vanished into the head's own glow, leaving a lit
         // block above the shoulders instead of two arms
-        arms(p,.40,.16,.36,.03,.60,.16,.64,.03); hips(p,.46,.50,.54,.50);
-        legs(p,.2250,.5478,.2250,.7678,.7438,.6248,.9117,.7678); toes(p,.169,.825,.9597,.8318);
+        arms(p,.35,.16,.31,.03,.55,.16,.59,.03); hips(p,.41,.50,.49,.50);
+        legs(p,.1750,.5478,.1750,.7678,.6955,.6263,.8617,.7678); toes(p,.0950,.7678,.9417,.7678);
     }
     /**
      * Virabhadrasana II: the same front knee stacked over its ankle, a wider
@@ -254,12 +261,14 @@ public final class DemoLandmarkSource implements LandmarkSource {
      * degree or two of bend so the straight leg reads as a leg rather than a
      * ruled line.
      *
-     * The feet matter as much as the knee here: the front foot points along the
-     * gaze, and the back foot turns in across the mat.
+     * The feet matter as much as the knee here: the front foot lies flat along
+     * the floor pointing where the gaze goes, and the back foot turns in across
+     * the mat - drawn with its toe above its ankle, which is how a foot turned
+     * across the picture reads in a single line from ankle to toe.
      */
     private void warriorTwo(EnumMap<LandmarkName, Landmark> p) {
-        arms(p,.30,.24,.14,.24,.70,.24,.86,.24); hips(p,.46,.52,.54,.52);
-        legs(p,.2550,.5678,.2550,.7878,.7138,.6448,.8817,.7878); toes(p,.195,.8406,.9297,.7238);
+        arms(p,.27,.24,.11,.24,.67,.24,.83,.24); hips(p,.45,.52,.49,.52);
+        legs(p,.2250,.5678,.2250,.7878,.6838,.6448,.8517,.7878); toes(p,.1450,.7878,.8997,.7238);
     }
     private void triangle(EnumMap<LandmarkName, Landmark> p) {
         at(p,LandmarkName.NOSE,.29,.24); shoulders(p,.32,.35,.39,.31);
@@ -376,7 +385,8 @@ public final class DemoLandmarkSource implements LandmarkSource {
      */
     private void goddess(EnumMap<LandmarkName, Landmark> p) {
         at(p,LandmarkName.NOSE,.50,.26); shoulders(p,.42,.38,.58,.38); arms(p,.30,.44,.28,.28,.70,.44,.72,.28);
-        hips(p,.43,.64,.57,.64); legs(p,.2201,.6480,.2201,.8680,.7799,.6480,.7799,.8680); toes(p,.1721,.9320,.8279,.9320);
+        // feet flat and turned out, level with the ankles rather than below
+        hips(p,.43,.64,.57,.64); legs(p,.2201,.6480,.2201,.8680,.7799,.6480,.7799,.8680); toes(p,.1401,.8680,.8599,.8680);
     }
     private void plank(EnumMap<LandmarkName, Landmark> p) {
         // one long line from heels to crown, supported on the hands

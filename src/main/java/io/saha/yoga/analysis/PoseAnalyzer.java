@@ -115,6 +115,13 @@ public final class PoseAnalyzer {
         if (weak.isEmpty()) return "Hold still for a moment so the view can settle.";
         String parts = weak.size() == 1 ? weak.getFirst()
                 : String.join(", ", weak.subList(0, weak.size() - 1)) + " and " + weak.getLast();
+        // Arms are lost off the top of the frame, not the sides, and telling
+        // someone reaching overhead to turn side-on does not give them their
+        // arms back. A pose measured at the elbow cannot be measured at all
+        // once the elbows are above the picture.
+        if (weak.stream().allMatch(part -> part.equals("elbows") || part.equals("hands"))) {
+            return "Your " + parts + " are above the top of the picture. Step back, or tilt the camera up, until your raised arms stay in frame.";
+        }
         // "resumes" is read aloud by the speech engine as "res-oo-mays", so the
         // wording avoids it rather than making the coach mispronounce itself
         return "Your " + parts + " are out of view. Adjust the camera or turn side-on, and coaching will pick up again on its own.";

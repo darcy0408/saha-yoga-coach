@@ -150,7 +150,10 @@ public final class SahaApp extends Application {
     private void showCalibration() {
         stopCameraPreview();
         var title = new Label("Set up your space"); title.getStyleClass().add("title");
-        var guide = new VBox(12, check("Place the camera around hip height."), check("Step back until your whole body fits."), check("Face a light source; avoid a bright window behind you."), check("Clear enough floor space to step in every direction.")); guide.getStyleClass().add("card");
+        // "until your whole body fits" is not far enough: several poses reach
+        // overhead, and a body that exactly fills the frame loses its arms the
+        // moment they go up - which is the pose the coach then cannot measure
+        var guide = new VBox(12, check("Place the camera around hip height."), check("Reach both arms overhead and step back until your hands still fit in the frame."), check("Face a light source; avoid a bright window behind you."), check("Clear enough floor space to step in every direction.")); guide.getStyleClass().add("card");
         var preview = createBodyView(); bodyView = preview; preview.setPrefSize(560, 460);
         cameraPreview = new ImageView(); cameraPreview.setPreserveRatio(true); cameraPreview.setFitWidth(560); cameraPreview.setFitHeight(460); cameraPreview.setVisible(false);
         cameraPreview.setScaleX(mirrorPreview ? -1 : 1);
