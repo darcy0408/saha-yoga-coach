@@ -82,6 +82,37 @@ class PoseAnalyzerTest {
         }
     }
 
+    /**
+     * A good lunge, seen at an angle, must not be corrected by the leg behind.
+     *
+     * The hidden leg still scores above the confidence gate while its
+     * coordinates are largely inferred, and MOST_BENT takes whichever angle is
+     * smaller - so it won the comparison and a knee stacked over its ankle was
+     * told it had travelled past it.
+     */
+    @Test void aLegHiddenBehindTheOtherDoesNotOverruleTheOneInPlainView() {
+        var pose = new PoseCatalog().require("low_lunge");
+        var points = new EnumMap<LandmarkName, Landmark>(LandmarkName.class);
+        for (var name : LandmarkName.values()) points.put(name, new Landmark(.5, .5, .9));
+        // the near leg, plainly visible, bent to a right angle over its ankle
+        points.put(LandmarkName.LEFT_HIP, new Landmark(.40, .50, .85));
+        points.put(LandmarkName.LEFT_KNEE, new Landmark(.40, .72, .85));
+        points.put(LandmarkName.LEFT_ANKLE, new Landmark(.62, .72, .85));
+        // the far leg, barely made out behind it, folded into a shape no one
+        // is holding - above the gate, well below the near leg
+        points.put(LandmarkName.RIGHT_HIP, new Landmark(.42, .50, .40));
+        points.put(LandmarkName.RIGHT_KNEE, new Landmark(.42, .72, .40));
+        points.put(LandmarkName.RIGHT_ANKLE, new Landmark(.44, .52, .40));
+
+        var result = assertInstanceOf(AnalysisResult.Reliable.class,
+                new PoseAnalyzer().analyze(pose, new LandmarkFrame(Instant.now(), points)));
+
+        assertEquals(90, result.measurements().getFirst().degrees(), 1,
+                "the leg in plain view is the one that should answer");
+        assertTrue(result.suggestions().isEmpty(),
+                () -> "a correct lunge was corrected by the leg behind it: " + result.suggestions());
+    }
+
     @Test void deliberateChairKneeDeviationProducesTheExpectedCue() {
         var source = new DemoLandmarkSource();
         var pose = new PoseCatalog().require("chair");

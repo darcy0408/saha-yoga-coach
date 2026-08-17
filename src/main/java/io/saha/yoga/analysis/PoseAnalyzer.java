@@ -16,6 +16,14 @@ public final class PoseAnalyzer {
      */
     public static final double RELIABILITY_THRESHOLD = 0.35;
     /**
+     * How much better one side must be seen before it answers on its own.
+     *
+     * Wide enough to separate a limb in plain view from one the model is
+     * largely inferring behind it, narrow enough that a body square to the
+     * camera - where both sides score alike - still gets both compared.
+     */
+    private static final double CLEARLY_BETTER_VIEW = 0.15;
+    /**
      * Enough to know a person is there at all.
      *
      * Shoulders only, and only the better of the two. Hips were in this set
@@ -45,9 +53,22 @@ public final class PoseAnalyzer {
             // therefore an angle - one built from guesses. Standing side-on
             // hides the far leg, and letting its invented angle win the
             // comparison is how a correctly bent knee got told to bend further.
-            boolean seePrimary = frame.minimumConfidence(List.of(rule.first(), rule.vertex(), rule.third())) >= RELIABILITY_THRESHOLD;
-            boolean seeMirrored = frame.minimumConfidence(List.of(mirror(rule.first()), mirror(rule.vertex()), mirror(rule.third()))) >= RELIABILITY_THRESHOLD;
-            double angle = seePrimary && seeMirrored ? select(rule, primary, mirrored)
+            double primaryView = frame.minimumConfidence(List.of(rule.first(), rule.vertex(), rule.third()));
+            double mirroredView = frame.minimumConfidence(List.of(mirror(rule.first()), mirror(rule.vertex()), mirror(rule.third())));
+            boolean seePrimary = primaryView >= RELIABILITY_THRESHOLD;
+            boolean seeMirrored = mirroredView >= RELIABILITY_THRESHOLD;
+            // Clearing the gate is not the same as being seen equally well. A
+            // leg standing behind the other still scores above the threshold
+            // while its coordinates are largely guessed, and MOST_BENT takes
+            // whichever angle is smaller - so the hidden leg won, and a lunge
+            // with the knee stacked over the ankle was told it had gone past
+            // its toes. Where one side is clearly better seen, it is the one
+            // that answers; the comparison is for when both are genuinely in
+            // view and the question is which side is leading.
+            double angle = seePrimary && seeMirrored
+                    ? (primaryView - mirroredView >= CLEARLY_BETTER_VIEW ? primary
+                        : mirroredView - primaryView >= CLEARLY_BETTER_VIEW ? mirrored
+                        : select(rule, primary, mirrored))
                     : seePrimary ? primary
                     : seeMirrored ? mirrored
                     : select(rule, primary, mirrored);
