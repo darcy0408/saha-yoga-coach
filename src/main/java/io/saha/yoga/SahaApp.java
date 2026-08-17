@@ -513,6 +513,9 @@ public final class SahaApp extends Application {
     private void updatePose() {
         var item = current();
         landmarks.selectPose(item.pose().id());
+        // the guide figure is drawn from the demo source's authored target, so
+        // it has to follow the practice even when the camera is driving
+        if (landmarks != demoSource) demoSource.selectPose(item.pose().id());
         poseLabel.setText("Current pose: " + item.pose().displayName());
         phaseLabel.setText(item.phase().toUpperCase()); timerLabel.setText(format(remaining));
         spoken.announce(item.pose()).ifPresent(voice::say);
@@ -639,6 +642,22 @@ public final class SahaApp extends Application {
     private static final Color JOINT = Color.web("#ffd489");
     private static final Color SKIN = Color.web("#f0dcae");
     private static final Color INK = Color.web("#1d4d47");
+    /** The target shape: present enough to aim at, quiet enough not to be mistaken for you. */
+    private static final Color GUIDE = Color.web("#cfe9d8", .62);
+    /** The links the guide figure draws; hands and toes are left off so it stays a clean shape. */
+    private static final List<LandmarkName[]> GUIDE_LINKS = List.of(
+            new LandmarkName[]{LandmarkName.LEFT_SHOULDER,LandmarkName.RIGHT_SHOULDER},
+            new LandmarkName[]{LandmarkName.LEFT_HIP,LandmarkName.RIGHT_HIP},
+            new LandmarkName[]{LandmarkName.LEFT_SHOULDER,LandmarkName.LEFT_HIP},
+            new LandmarkName[]{LandmarkName.RIGHT_SHOULDER,LandmarkName.RIGHT_HIP},
+            new LandmarkName[]{LandmarkName.LEFT_SHOULDER,LandmarkName.LEFT_ELBOW},
+            new LandmarkName[]{LandmarkName.LEFT_ELBOW,LandmarkName.LEFT_WRIST},
+            new LandmarkName[]{LandmarkName.RIGHT_SHOULDER,LandmarkName.RIGHT_ELBOW},
+            new LandmarkName[]{LandmarkName.RIGHT_ELBOW,LandmarkName.RIGHT_WRIST},
+            new LandmarkName[]{LandmarkName.LEFT_HIP,LandmarkName.LEFT_KNEE},
+            new LandmarkName[]{LandmarkName.LEFT_KNEE,LandmarkName.LEFT_ANKLE},
+            new LandmarkName[]{LandmarkName.RIGHT_HIP,LandmarkName.RIGHT_KNEE},
+            new LandmarkName[]{LandmarkName.RIGHT_KNEE,LandmarkName.RIGHT_ANKLE});
 
     private static javafx.scene.effect.DropShadow glow(Color colour, double radius) {
         return new javafx.scene.effect.DropShadow(javafx.scene.effect.BlurType.GAUSSIAN, colour, radius, .38, 0, 0);
@@ -766,6 +785,12 @@ public final class SahaApp extends Application {
         final boolean flip = live && mirrorPreview;
         final java.util.function.DoubleUnaryOperator mapX =
                 value -> flip ? offsetX + scale - value * scale : offsetX + value * scale;
+        // The target pose, drawn faintly underneath and scaled to your own
+        // body, so the correction is a shape to move into rather than a
+        // sentence to decode. It is drawn before anything else and outside the
+        // guards below, so it is still there on the frames where the camera has
+        // lost you - which is exactly when you most need to know the shape.
+        if (live) drawGuide(frame, offsetY, scale, mapX);
         var links = List.of(new LandmarkName[]{LandmarkName.LEFT_SHOULDER,LandmarkName.RIGHT_SHOULDER}, new LandmarkName[]{LandmarkName.LEFT_HIP,LandmarkName.RIGHT_HIP}, new LandmarkName[]{LandmarkName.LEFT_HIP,LandmarkName.LEFT_KNEE}, new LandmarkName[]{LandmarkName.LEFT_KNEE,LandmarkName.LEFT_ANKLE}, new LandmarkName[]{LandmarkName.LEFT_ANKLE,LandmarkName.LEFT_TOE}, new LandmarkName[]{LandmarkName.RIGHT_HIP,LandmarkName.RIGHT_KNEE}, new LandmarkName[]{LandmarkName.RIGHT_KNEE,LandmarkName.RIGHT_ANKLE}, new LandmarkName[]{LandmarkName.RIGHT_ANKLE,LandmarkName.RIGHT_TOE}, new LandmarkName[]{LandmarkName.LEFT_SHOULDER,LandmarkName.LEFT_ELBOW}, new LandmarkName[]{LandmarkName.LEFT_ELBOW,LandmarkName.LEFT_WRIST}, new LandmarkName[]{LandmarkName.LEFT_WRIST,LandmarkName.LEFT_HAND}, new LandmarkName[]{LandmarkName.RIGHT_SHOULDER,LandmarkName.RIGHT_ELBOW}, new LandmarkName[]{LandmarkName.RIGHT_ELBOW,LandmarkName.RIGHT_WRIST}, new LandmarkName[]{LandmarkName.RIGHT_WRIST,LandmarkName.RIGHT_HAND});
         double limbWidth = Math.max(5, scale * .018);
         for (var link : links) {
@@ -829,6 +854,83 @@ public final class SahaApp extends Application {
         var label = new Text(18, 28, live ? "Your body · nothing else from the room is drawn" : landmarks.description());
         label.setFill(Color.web("#b7c8c5"));
         bodyView.getChildren().add(label);
+    }
+
+    /**
+     * Draws the pose you are aiming for, behind the body you actually have.
+     *
+     * The target comes from the same authored frame the analyzer measures
+     * against, so the ghost cannot disagree with the cue you are being given.
+     * It is fitted to you by a similarity transform: hips to hips, scaled by
+     * torso length. That way it appears at your size and where you are standing
+     * rather than floating at some canonical position, and matching it is the
+     * instruction.
+     *
+     * When the camera cannot see your torso there is nothing to fit to, so the
+     * target is drawn where it was authored - still useful, since a body that
+     * is half out of frame needs the shape more than the alignment.
+     */
+    private void drawGuide(LandmarkFrame live, double offsetY, double scale, java.util.function.DoubleUnaryOperator mapX) {
+        var target = demoSource.targetFrame().landmarks();
+        var targetHip = midpointOf(target, LandmarkName.LEFT_HIP, LandmarkName.RIGHT_HIP);
+        var targetShoulder = midpointOf(target, LandmarkName.LEFT_SHOULDER, LandmarkName.RIGHT_SHOULDER);
+        if (targetHip == null || targetShoulder == null) return;
+        double targetTorso = Math.hypot(targetShoulder[0] - targetHip[0], targetShoulder[1] - targetHip[1]);
+        if (targetTorso < 1e-6) return;
+
+        double fit = 1, shiftX = 0, shiftY = 0;
+        var liveHip = confidentMidpoint(live, LandmarkName.LEFT_HIP, LandmarkName.RIGHT_HIP);
+        var liveShoulder = confidentMidpoint(live, LandmarkName.LEFT_SHOULDER, LandmarkName.RIGHT_SHOULDER);
+        if (liveHip != null && liveShoulder != null) {
+            double liveTorso = Math.hypot(liveShoulder[0] - liveHip[0], liveShoulder[1] - liveHip[1]);
+            if (liveTorso > 1e-6) {
+                fit = liveTorso / targetTorso;
+                shiftX = liveHip[0] - targetHip[0] * fit;
+                shiftY = liveHip[1] - targetHip[1] * fit;
+            }
+        }
+        final double k = fit, dx = shiftX, dy = shiftY;
+        java.util.function.Function<Landmark, double[]> place = point -> new double[]{
+                mapX.applyAsDouble(point.x() * k + dx), offsetY + (point.y() * k + dy) * scale};
+
+        double width = Math.max(3, scale * .014);
+        for (var link : GUIDE_LINKS) {
+            var a = target.get(link[0]);
+            var b = target.get(link[1]);
+            if (a == null || b == null) continue;
+            var from = place.apply(a);
+            var to = place.apply(b);
+            var line = new Line(from[0], from[1], to[0], to[1]);
+            line.setStroke(GUIDE);
+            line.setStrokeWidth(width);
+            line.setStrokeLineCap(javafx.scene.shape.StrokeLineCap.ROUND);
+            line.getStrokeDashArray().addAll(width * 2.4, width * 1.8);
+            bodyView.getChildren().add(line);
+        }
+        var nose = target.get(LandmarkName.NOSE);
+        if (nose != null) {
+            var head = place.apply(nose);
+            var circle = new Circle(head[0], head[1], Math.max(12, scale * .048 * k));
+            circle.setFill(null);
+            circle.setStroke(GUIDE);
+            circle.setStrokeWidth(width);
+            circle.getStrokeDashArray().addAll(width * 2.4, width * 1.8);
+            bodyView.getChildren().add(circle);
+        }
+    }
+
+    private double[] midpointOf(java.util.Map<LandmarkName, Landmark> points, LandmarkName left, LandmarkName right) {
+        var a = points.get(left);
+        var b = points.get(right);
+        return a == null || b == null ? null : new double[]{(a.x() + b.x()) / 2, (a.y() + b.y()) / 2};
+    }
+
+    /** Only fits to joints the camera actually saw; a guessed hip would drag the guide off the body. */
+    private double[] confidentMidpoint(LandmarkFrame frame, LandmarkName left, LandmarkName right) {
+        var a = frame.landmarks().get(left);
+        var b = frame.landmarks().get(right);
+        if (a == null || b == null || a.confidence() < DRAW_THRESHOLD || b.confidence() < DRAW_THRESHOLD) return null;
+        return new double[]{(a.x() + b.x()) / 2, (a.y() + b.y()) / 2};
     }
 
     /**
