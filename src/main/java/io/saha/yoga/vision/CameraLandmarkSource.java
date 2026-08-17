@@ -29,6 +29,7 @@ public final class CameraLandmarkSource implements LandmarkSource {
 
     private final CameraCapture capture;
     private final PoseEstimator estimator;
+    private final LandmarkSmoother smoother = new LandmarkSmoother();
     private final AtomicReference<LandmarkFrame> latest = new AtomicReference<>();
     private final AtomicReference<CameraFrame> latestImage = new AtomicReference<>();
     private volatile String description = "Camera landmarks · starting";
@@ -58,7 +59,7 @@ public final class CameraLandmarkSource implements LandmarkSource {
             latestImage.set(frame);
             images.accept(frame);
             try {
-                latest.set(estimator.estimate(frame));
+                latest.set(smoother.smooth(estimator.estimate(frame)));
                 description = "Camera landmarks · on this device only";
             } catch (Exception e) {
                 // One bad frame should not end the session; the confidence gate
