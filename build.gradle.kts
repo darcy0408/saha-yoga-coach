@@ -58,6 +58,14 @@ tasks.register<JavaExec>("colourCheck") {
     jvmArgs("--enable-preview", "--enable-native-access=ALL-UNNAMED")
 }
 
+tasks.register<JavaExec>("cameraCheck") {
+    group = "verification"
+    description = "Reports which camera devices and backends this machine can actually open and read"
+    classpath = sourceSets.main.get().runtimeClasspath
+    mainClass = "io.saha.yoga.vision.CameraCheckLauncher"
+    jvmArgs("--enable-preview", "--enable-native-access=ALL-UNNAMED")
+}
+
 tasks.register<JavaExec>("chimeCheck") {
     group = "verification"
     description = "Plays the pose-came-right chime, and reports whether this machine can play it"
