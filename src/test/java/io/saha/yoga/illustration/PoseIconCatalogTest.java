@@ -42,9 +42,12 @@ class PoseIconCatalogTest {
     @Test void everyRoutinePoseHasAFigure() {
         var unillustrated = new PoseCatalog().all().stream().map(pose -> pose.id())
                 .filter(id -> catalog.forPose(id).isEmpty()).toList();
-        // Warrior II is the sole exception and falls back to the audited CC0
-        // illustration, so every pose in the practice shows a figure.
-        assertEquals(Set.of("warrior_two"), Set.copyOf(unillustrated), "an unexpected pose lost its figure");
+        // Warrior II falls back to the audited CC0 illustration, so it still
+        // shows a figure. The seated twist deliberately shows none: a twist is
+        // a rotation about the spine, which a flat line drawing cannot say, and
+        // the icon for it was read by a reviewer as putting the legs somewhere
+        // they should not go. Written guidance beats a picture that misleads.
+        assertEquals(Set.of("warrior_two", "seated_twist"), Set.copyOf(unillustrated), "an unexpected pose lost its figure");
         assertTrue(new TeachingAssetCatalog().enabledForCoaching("warrior_two").isPresent(),
                 "warrior_two must keep its fallback illustration");
     }

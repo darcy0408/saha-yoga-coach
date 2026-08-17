@@ -50,7 +50,12 @@ public final class PoseIconCatalog {
             Map.entry("locust", "LocustPose"),
             Map.entry("bridge", "BridgeYogaPose"),
             Map.entry("seated_fold", "SeatedForwardBendPose"),
-            Map.entry("seated_twist", "TwistPose"),
+            // seated_twist has no icon on purpose. A twist is a rotation about
+            // the spine, which a single flat line drawing cannot show: the one
+            // in the pack was read by a reviewer as asking for the legs to go
+            // somewhere they should not. This project's rule is that teaching
+            // art ships only once a person has looked at it and approved it, so
+            // this pose falls back to its written setup instead.
             Map.entry("head_to_knee", "LegStretchSittingPose"),
             Map.entry("rest", "RestPose"));
 

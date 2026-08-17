@@ -160,7 +160,20 @@ public final class DemoLandmarkSource implements LandmarkSource {
     @Override public String transitionGuidance() { return transitionWaypoint == null
             ? "Move slowly while keeping each joint comfortable."
             : "Soften your knees, fold forward, place your hands down, then move one knee at a time."; }
-    @Override public double spineBend() { return poseId.equals("cat_cow") ? Math.sin(System.nanoTime()/1_200_000_000.0)*.075 : 0; }
+    /**
+     * How far the drawn spine curves away from the straight line between the
+     * shoulders and the hips.
+     *
+     * Cat-cow moves with the breath. A fold holds a steady curve: hinging over
+     * the legs rounds the back, and drawn as a straight rod between shoulder
+     * and hip the figure read as a plank tipped forward rather than a body
+     * folding over itself.
+     */
+    @Override public double spineBend() { return switch (poseId) {
+        case "cat_cow" -> Math.sin(System.nanoTime()/1_200_000_000.0)*.075;
+        case "seated_fold", "head_to_knee", "standing_fold" -> .055;
+        default -> 0;
+    }; }
     private boolean crossesFloorBoundary(String from,String to) { return isFloor(from)!=isFloor(to); }
     private boolean isFloor(String id) { return switch(id){
         case "cat_cow","bridge","seated_fold","rest","easy_seat","seated_side_reach","seated_twist",
