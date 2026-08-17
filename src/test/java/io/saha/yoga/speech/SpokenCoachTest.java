@@ -104,6 +104,24 @@ class SpokenCoachTest {
                 "the new pose starts from its own first step");
     }
 
+    @Test void comingIntoRangeIsSaidOnce() {
+        now = SpokenCoach.CUE_GAP_NANOS * 10;
+        coach.announce(catalog.require("chair"));
+        assertEquals("Great! Now hold that pose.", coach.arrived().orElseThrow());
+        // alignment at the edge of a range flickers several times a second, and
+        // every crossing must not be greeted
+        now += SpokenCoach.CUE_GAP_NANOS * 10;
+        assertTrue(coach.arrived().isEmpty(), "arriving twice in one pose should stay quiet");
+    }
+
+    @Test void theNextPoseCanBeArrivedInToo() {
+        now = SpokenCoach.CUE_GAP_NANOS * 10;
+        coach.announce(catalog.require("chair"));
+        assertTrue(coach.arrived().isPresent());
+        coach.announce(catalog.require("tree"));
+        assertTrue(coach.arrived().isPresent(), "each pose gets its own arrival");
+    }
+
     @Test void blankCuesAreNeverSpoken() {
         now = SpokenCoach.CUE_GAP_NANOS * 10;
         assertTrue(coach.cue("   ").isEmpty());

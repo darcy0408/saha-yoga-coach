@@ -60,6 +60,7 @@ public final class SpokenCoach {
     private long lastFramingAt;
     private String setupPose;
     private int setupStep;
+    private boolean arrivalAnnounced;
 
     public SpokenCoach() { this(System::nanoTime); }
 
@@ -69,6 +70,7 @@ public final class SpokenCoach {
     public Optional<String> announce(Pose pose) {
         setupPose = pose.id();
         setupStep = 1;
+        arrivalAnnounced = false;
         return emit(pose.displayName() + ". " + pose.instructions().getFirst());
     }
 
@@ -130,6 +132,23 @@ public final class SpokenCoach {
         if (hasSpoken && clock.getAsLong() - lastAt < PRAISE_GAP_NANOS) return Optional.empty();
         var line = PRAISE[praiseIndex++ % PRAISE.length];
         return emit(line);
+    }
+
+    /**
+     * Said the moment a measured pose first comes into range, with the chime.
+     *
+     * The chime says something happened; this says what. It is the one moment
+     * in a hold worth interrupting for, because it is the only time the coach
+     * knows the body has arrived rather than that it is still travelling.
+     *
+     * Once per pose, deliberately. Alignment near the edge of a range flickers
+     * in and out several times a second, and a coach that shouted "great" on
+     * every crossing would be unbearable in the poses hardest to hold still.
+     */
+    public Optional<String> arrived() {
+        if (arrivalAnnounced) return Optional.empty();
+        arrivalAnnounced = true;
+        return emit("Great! Now hold that pose.");
     }
 
     /** Said once at the midpoint of a pose that should be done on both sides. */

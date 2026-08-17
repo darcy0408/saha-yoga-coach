@@ -462,7 +462,11 @@ public final class SahaApp extends Application {
                 spoken.framingResolved();
                 measurementLabel.setText(readMeasurements(r));
                 boolean aligned = r.suggestions().isEmpty() && r.measurements().stream().anyMatch(AnalysisResult.Measurement::inRange);
-                if (aligned && !wasAligned) chime.play();
+                // the chime says something happened; the words say what
+                if (aligned && !wasAligned) {
+                    chime.play();
+                    spoken.arrived().ifPresent(voice::say);
+                }
                 wasAligned = aligned;
                 if (!r.suggestions().isEmpty()) spoken.cue(r.suggestions().getFirst()).ifPresent(voice::say);
                 else if (aligned) spoken.praise().ifPresent(voice::say);
