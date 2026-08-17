@@ -423,6 +423,7 @@ public final class SahaApp extends Application {
     private Label wrapLabel() { var label = new Label(); label.setWrapText(true); label.setMaxWidth(Double.MAX_VALUE); label.setMinHeight(Region.USE_PREF_SIZE); return label; }
     private Button actionButton(String text) { var button = new Button(text); button.setMaxWidth(Double.MAX_VALUE); return button; }
     private RoutineItem current() { return routine.items().get(itemIndex); }
+    private void speakSetup() { spoken.setup(current().pose()).ifPresent(voice::say); }
     private void tick() {
         if (livePreviewActive && cameraSource == null) {
             statusLabel.setText("Status: Live preview — alignment not analyzed");
@@ -430,11 +431,15 @@ public final class SahaApp extends Application {
                     + (modelFallbackReason.isEmpty() ? "Saha can display your camera, but the pose model is not connected yet." : modelFallbackReason));
             optionalLabel.setText("Optional adjustment: " + current().pose().modifications().getFirst());
             confidenceLabel.setText("Camera: Active · alignment confidence unavailable");
+            speakSetup();
             if (!paused && ++clockTicks % 10 == 0 && --remaining <= 0) advance(false);
             timerLabel.setText(format(remaining) + (paused ? " · paused" : ""));
             return;
         }
         var frame = landmarks.nextFrame();
+        // before the analysis, so getting into the pose is talked through while
+        // there is still time to act on it - and whether or not it is measured
+        speakSetup();
         if (cameraSource != null && !figureOnly) cameraSource.latestImage().ifPresent(image -> drawCameraOverlay(frame, image.width()));
         else drawFrame(frame, cameraSource != null);
         if (landmarks.isTransitioning()) {

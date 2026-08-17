@@ -64,6 +64,46 @@ class SpokenCoachTest {
         assertTrue(coach.framing("Your feet are out of view.").isPresent(), "a genuinely new episode should speak");
     }
 
+    @Test void gettingIntoThePoseIsTalkedThroughAfterItIsAnnounced() {
+        var warrior = catalog.require("warrior_one");
+        now = SpokenCoach.SETUP_GAP_NANOS * 10;
+        coach.announce(warrior);
+        // straight after the announcement there is nothing more to add yet
+        assertTrue(coach.setup(warrior).isEmpty(), "a step on top of the announcement is a recitation");
+        now += SpokenCoach.SETUP_GAP_NANOS;
+        var first = coach.setup(warrior).orElseThrow();
+        now += SpokenCoach.SETUP_GAP_NANOS;
+        var second = coach.setup(warrior).orElseThrow();
+        assertNotEquals(first, second, "each step should move the practitioner on");
+        assertEquals(warrior.instructions().get(1), first);
+        assertEquals(warrior.instructions().get(2), second);
+        // and then it stops, rather than looping the setup for the whole hold
+        now += SpokenCoach.SETUP_GAP_NANOS * 10;
+        assertTrue(coach.setup(warrior).isEmpty(), "a pose runs out of setup steps");
+    }
+
+    @Test void everyPoseCanTalkSomeoneIntoIt() {
+        for (var pose : catalog.all()) {
+            assertTrue(pose.instructions().size() >= 3,
+                    pose.id() + " should carry its summary and at least two practical steps");
+            pose.instructions().forEach(line ->
+                    assertFalse(line.isBlank(), pose.id() + " has a blank instruction"));
+        }
+    }
+
+    @Test void theStepsRestartWhenTheNextPoseArrives() {
+        var chair = catalog.require("chair");
+        var tree = catalog.require("tree");
+        now = SpokenCoach.SETUP_GAP_NANOS * 10;
+        coach.announce(chair);
+        now += SpokenCoach.SETUP_GAP_NANOS;
+        assertEquals(chair.instructions().get(1), coach.setup(chair).orElseThrow());
+        coach.announce(tree);
+        now += SpokenCoach.SETUP_GAP_NANOS;
+        assertEquals(tree.instructions().get(1), coach.setup(tree).orElseThrow(),
+                "the new pose starts from its own first step");
+    }
+
     @Test void blankCuesAreNeverSpoken() {
         now = SpokenCoach.CUE_GAP_NANOS * 10;
         assertTrue(coach.cue("   ").isEmpty());

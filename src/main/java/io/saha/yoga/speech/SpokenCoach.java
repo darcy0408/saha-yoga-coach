@@ -33,6 +33,15 @@ public final class SpokenCoach {
 
     /** Long enough that encouragement stays encouragement. */
     static final long PRAISE_GAP_NANOS = 25_000_000_000L;
+
+    /**
+     * Quiet time between the setup steps for a pose.
+     *
+     * Shorter than the cue gap on purpose: these are said while someone is
+     * still moving into the shape, and a step that arrives after they have
+     * settled is a step they cannot use.
+     */
+    static final long SETUP_GAP_NANOS = 5_000_000_000L;
     private static final String[] PRAISE = {
             "Great — that is the shape.",
             "Lovely. Hold it there.",
@@ -49,6 +58,8 @@ public final class SpokenCoach {
     private boolean nagged;
     private long lastAt;
     private long lastFramingAt;
+    private String setupPose;
+    private int setupStep;
 
     public SpokenCoach() { this(System::nanoTime); }
 
@@ -56,7 +67,28 @@ public final class SpokenCoach {
 
     /** A pose change is always announced, with its first instruction. */
     public Optional<String> announce(Pose pose) {
+        setupPose = pose.id();
+        setupStep = 1;
         return emit(pose.displayName() + ". " + pose.instructions().getFirst());
+    }
+
+    /**
+     * The next practical step for getting into the pose.
+     *
+     * A coach that only speaks to correct you leaves you to work out how to
+     * arrive in the shape on your own, which is the part a beginner most needs
+     * said out loud - and the part they cannot read off a screen from inside a
+     * forward fold. These are setup steps, not corrections: they say where to
+     * put a foot, and claim nothing about what the camera measured.
+     *
+     * They are handed out one at a time so the voice stays a coach rather than
+     * a recitation, and they stop as soon as the pose runs out of steps.
+     */
+    public Optional<String> setup(Pose pose) {
+        if (!pose.id().equals(setupPose)) { setupPose = pose.id(); setupStep = 1; }
+        if (setupStep >= pose.instructions().size()) return Optional.empty();
+        if (hasSpoken && clock.getAsLong() - lastAt < SETUP_GAP_NANOS) return Optional.empty();
+        return emit(pose.instructions().get(setupStep++));
     }
 
     /** An alignment or framing cue, spoken only if it is new and the voice has been quiet. */
@@ -105,9 +137,11 @@ public final class SpokenCoach {
         return emit("Switch sides.");
     }
 
-    /** Said once when the practice ends. */
+    /** Said once when the practice ends. Finishing twenty poses deserves to be marked. */
     public Optional<String> finish(boolean completed) {
-        return emit(completed ? "Practice complete. Take a moment before you get up." : "Practice stopped.");
+        return emit(completed
+                ? "That is the whole practice. Well done — twenty poses, start to finish. Rest here as long as you like."
+                : "Practice stopped. Come back whenever you are ready.");
     }
 
     private Optional<String> emit(String line) {
