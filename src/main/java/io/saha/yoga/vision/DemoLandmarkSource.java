@@ -172,6 +172,9 @@ public final class DemoLandmarkSource implements LandmarkSource {
     @Override public double spineBend() { return switch (poseId) {
         case "cat_cow" -> Math.sin(System.nanoTime()/1_200_000_000.0)*.075;
         case "seated_fold", "head_to_knee", "standing_fold" -> .055;
+        // a side reach is a crescent: the lengthening side bows outward, away
+        // from the lifted arm, rather than caving in toward it
+        case "seated_side_reach" -> -.06;
         default -> 0;
     }; }
     private boolean crossesFloorBoundary(String from,String to) { return isFloor(from)!=isFloor(to); }

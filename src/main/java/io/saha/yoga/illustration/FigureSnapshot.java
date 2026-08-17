@@ -48,7 +48,7 @@ public final class FigureSnapshot extends Application {
         // the poses whose shape has been wrong at some point: lunge depth,
         // squat depth, which way a body faces and whether its hands and feet
         // reach the floor are all things numbers hide and a picture does not
-        for (var pose : List.of("chair", "cat_cow", "warrior_one", "warrior_two", "goddess", "seated_fold", "tree", "downward_dog")) {
+        for (var pose : List.of("seated_side_reach", "cat_cow", "warrior_one", "warrior_two", "goddess", "seated_fold", "tree", "downward_dog")) {
             var source = new DemoLandmarkSource();
             source.selectPose(pose);
             sourceField.set(app, source);
