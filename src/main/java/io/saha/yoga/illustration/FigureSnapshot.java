@@ -42,10 +42,12 @@ public final class FigureSnapshot extends Application {
         sourceField.setAccessible(true);
 
         var gallery = new TilePane();
-        gallery.setHgap(14); gallery.setVgap(14); gallery.setPrefColumns(4);
+        gallery.setHgap(14); gallery.setVgap(14); gallery.setPrefColumns(5);
         gallery.setPadding(new Insets(22));
         gallery.setStyle("-fx-background-color: #091817;");
-        for (var pose : List.of("chair", "tree", "warrior_two", "downward_dog")) {
+        // both warriors are here because their lunge depth is the easiest thing
+        // in the demo figure to get wrong and the hardest to see from numbers
+        for (var pose : List.of("chair", "tree", "warrior_one", "warrior_two", "downward_dog")) {
             var source = new DemoLandmarkSource();
             source.selectPose(pose);
             sourceField.set(app, source);
@@ -61,7 +63,7 @@ public final class FigureSnapshot extends Application {
             card.setStyle("-fx-background-color: #091817;");
             gallery.getChildren().add(card);
         }
-        var scene = new Scene(gallery, 1300, 380, Color.web("#091817"));
+        var scene = new Scene(gallery, 1620, 380, Color.web("#091817"));
         scene.getStylesheets().add(Objects.requireNonNull(getClass().getResource("/io/saha/yoga/saha.css")).toExternalForm());
         gallery.applyCss(); gallery.layout();
         var snapshot = gallery.snapshot(new SnapshotParameters(), null);

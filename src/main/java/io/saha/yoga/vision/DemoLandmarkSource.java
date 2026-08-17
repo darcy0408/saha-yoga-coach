@@ -159,17 +159,51 @@ public final class DemoLandmarkSource implements LandmarkSource {
         at(p, LandmarkName.NOSE,.50,.10); shoulders(p,.42,.21,.58,.21); arms(p,.40,.40,.39,.58,.60,.40,.61,.58);
         hips(p,.46,.48,.54,.48); legs(p,.46,.70,.45,.88,.54,.70,.55,.88); toes(p,.45,.96,.55,.96);
     }
+    /**
+     * Utkatasana, facing right: hips sink back BEHIND the heels while the chest
+     * and arms travel forward over them. Drawn the other way round the figure
+     * was leaning back over its own heels with the arms behind it, which is a
+     * shape that falls over.
+     */
     private void chair(EnumMap<LandmarkName, Landmark> p) {
-        at(p,LandmarkName.NOSE,.38,.16); shoulders(p,.40,.29,.43,.30); arms(p,.31,.15,.33,.02,.34,.15,.36,.02);
-        hips(p,.52,.51,.55,.52); legs(p,.69,.54,.67,.78,.72,.57,.70,.81); toes(p,.74,.78,.77,.81);
+        at(p,LandmarkName.NOSE,.60,.22); shoulders(p,.55,.33,.57,.34); arms(p,.68,.24,.80,.15,.70,.26,.82,.17);
+        hips(p,.40,.56,.42,.57); legs(p,.55,.68,.55,.92,.57,.70,.57,.94); toes(p,.66,.95,.68,.955);
     }
+    /**
+     * Virabhadrasana I: a front knee bent over its ankle, and a long back leg.
+     *
+     * The coordinates are authored at the bone lengths constrain() enforces
+     * (.23 thigh, .22 shin) rather than at whatever shape reads well on paper.
+     * Authoring a deeper lunge than the bones allow does not deepen it: the
+     * chain is rebuilt outward from the hip at fixed lengths, so a knee placed
+     * too far away only changes the direction the thigh points and the leg
+     * arrives straighter than it was drawn. That is how this pose came to sit
+     * at 152 degrees while asking the body for 80 to 145 - it was telling a
+     * practitioner to bend a knee that its own reference had straightened.
+     *
+     * Placing the ankle directly below the knee keeps the shin vertical, and
+     * the thigh leaves the hip at 25 degrees above horizontal, which closes the
+     * front knee to about 115 degrees - a real lunge, comfortably inside range.
+     */
     private void warriorOne(EnumMap<LandmarkName, Landmark> p) {
-        arms(p,.34,.13,.44,.04,.66,.13,.56,.04); hips(p,.46,.48,.54,.48);
-        legs(p,.34,.65,.34,.86,.67,.65,.79,.85); toes(p,.25,.86,.87,.85);
+        // reaching up and slightly apart rather than together: drawn to the
+        // midline both arms vanished into the head's own glow, leaving a lit
+        // block above the shoulders instead of two arms
+        arms(p,.40,.16,.36,.03,.60,.16,.64,.03); hips(p,.46,.50,.54,.50);
+        legs(p,.242,.597,.242,.817,.7236,.6514,.869,.817); toes(p,.202,.886,.917,.881);
     }
+    /**
+     * Virabhadrasana II: the same front knee stacked over its ankle, a wider
+     * stance, level arms, and the feet turned the way the pose actually asks -
+     * front foot pointing along the gaze, back foot turned in across the mat.
+     *
+     * Authored at constrain()'s bone lengths for the reason given on Warrior I.
+     * The back knee carries a degree or two of bend so the straight leg reads
+     * as a leg rather than a ruled line.
+     */
     private void warriorTwo(EnumMap<LandmarkName, Landmark> p) {
-        arms(p,.29,.21,.16,.21,.71,.21,.84,.21); hips(p,.46,.48,.54,.48);
-        legs(p,.34,.64,.34,.85,.67,.66,.80,.85); toes(p,.25,.85,.80,.77);
+        arms(p,.30,.24,.14,.24,.70,.24,.86,.24); hips(p,.46,.52,.54,.52);
+        legs(p,.2639,.5987,.2639,.8187,.702,.6615,.8566,.8187); toes(p,.208,.876,.905,.755);
     }
     private void triangle(EnumMap<LandmarkName, Landmark> p) {
         at(p,LandmarkName.NOSE,.29,.24); shoulders(p,.32,.35,.39,.31);
@@ -180,12 +214,17 @@ public final class DemoLandmarkSource implements LandmarkSource {
         arms(p,.30,.12,.42,.01,.70,.12,.58,.01); hips(p,.46,.48,.54,.48);
         legs(p,.47,.69,.47,.88,.68,.62,.50,.57); toes(p,.53,.89,.52,.64);
     }
+    /**
+     * Tabletop, facing left: wrists stacked under shoulders and shins down, so
+     * both hands and both feet rest on the floor. The arms and shins were
+     * ending short of the ground, leaving the figure hovering above the mat.
+     */
     private void tabletop(EnumMap<LandmarkName, Landmark> p) {
-        at(p,LandmarkName.NOSE,.23,.40); shoulders(p,.34,.45,.36,.48); hips(p,.58,.45,.60,.48);
-        arms(p,.34,.62,.34,.79,.37,.65,.37,.82);
-        at(p,LandmarkName.LEFT_HAND,.28,.79); at(p,LandmarkName.RIGHT_HAND,.31,.82);
-        legs(p,.58,.62,.58,.79,.61,.65,.61,.82);
-        toes(p,.65,.80,.68,.82);
+        at(p,LandmarkName.NOSE,.20,.52); shoulders(p,.31,.58,.33,.60); hips(p,.62,.58,.64,.60);
+        arms(p,.31,.75,.31,.92,.33,.77,.33,.94);
+        at(p,LandmarkName.LEFT_HAND,.30,.955); at(p,LandmarkName.RIGHT_HAND,.32,.955);
+        legs(p,.62,.76,.62,.94,.64,.78,.64,.95);
+        toes(p,.71,.955,.73,.955);
     }
     private void lowLunge(EnumMap<LandmarkName, Landmark> p) {
         // Anjaneyasana, facing left: hips sunk to knee height, front shin
@@ -259,10 +298,13 @@ public final class DemoLandmarkSource implements LandmarkSource {
         at(p,LandmarkName.LEFT_HAND,.13,.94); at(p,LandmarkName.RIGHT_HAND,.15,.95);
         hips(p,.60,.34,.62,.36); legs(p,.70,.60,.78,.86,.72,.62,.80,.88); toes(p,.83,.94,.85,.95);
     }
+    /**
+     * Goddess: a wide stance with the thighs sinking toward parallel, which is
+     * lower than it was drawn - the hips sat barely below standing height.
+     */
     private void goddess(EnumMap<LandmarkName, Landmark> p) {
-        // wide stance, toes turned out, both knees bent, elbows bent up
-        at(p,LandmarkName.NOSE,.50,.20); shoulders(p,.42,.32,.58,.32); arms(p,.32,.38,.30,.24,.68,.38,.70,.24);
-        hips(p,.44,.56,.56,.56); legs(p,.30,.72,.30,.90,.70,.72,.70,.90); toes(p,.22,.95,.78,.95);
+        at(p,LandmarkName.NOSE,.50,.26); shoulders(p,.42,.38,.58,.38); arms(p,.30,.44,.28,.28,.70,.44,.72,.28);
+        hips(p,.43,.64,.57,.64); legs(p,.26,.70,.26,.94,.74,.70,.74,.94); toes(p,.17,.955,.83,.955);
     }
     private void plank(EnumMap<LandmarkName, Landmark> p) {
         // one long line from heels to crown, supported on the hands
