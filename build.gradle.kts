@@ -58,6 +58,15 @@ tasks.register<JavaExec>("colourCheck") {
     jvmArgs("--enable-preview", "--enable-native-access=ALL-UNNAMED")
 }
 
+tasks.register<JavaExec>("coverSnapshot") {
+    group = "verification"
+    description = "Renders the project cover image to build/review/cover.png"
+    classpath = sourceSets.main.get().runtimeClasspath
+    mainClass = "io.saha.yoga.illustration.CoverSnapshotLauncher"
+    args(layout.buildDirectory.file("review/cover.png").get().asFile.absolutePath)
+    jvmArgs("--enable-preview", "--enable-native-access=ALL-UNNAMED")
+}
+
 tasks.register<JavaExec>("cameraCheck") {
     group = "verification"
     description = "Reports which camera devices and backends this machine can actually open and read"
