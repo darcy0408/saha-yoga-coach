@@ -52,7 +52,7 @@ public final class TeachingCardSnapshot extends Application {
         var row = new HBox(20);
         row.setPadding(new Insets(24));
         row.setStyle("-fx-background-color: #102523;");
-        for (var poseId : List.of("chair", "warrior_two", "downward_dog")) {
+        for (var poseId : List.of("rest", "chair", "warrior_two", "downward_dog")) {
             var card = new VBox(CARD_SPACING);
             card.getStyleClass().add("teaching-view");
             card.setPrefSize(CARD_WIDTH, CARD_PREF_HEIGHT);
@@ -69,7 +69,7 @@ public final class TeachingCardSnapshot extends Application {
             VBox.setVgrow(card, Priority.NEVER);
             row.getChildren().add(column);
         }
-        var scene = new Scene(row, 1840, 420, Color.web("#102523"));
+        var scene = new Scene(row, 2440, 420, Color.web("#102523"));
         scene.getStylesheets().add(Objects.requireNonNull(getClass().getResource("/io/saha/yoga/saha.css")).toExternalForm());
         row.applyCss(); row.layout();
         var snapshot = row.snapshot(new SnapshotParameters(), null);

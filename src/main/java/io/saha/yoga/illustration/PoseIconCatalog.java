@@ -62,6 +62,20 @@ public final class PoseIconCatalog {
     /** One icon: stroked sub-paths plus the head circles, all in the 24x24 box. */
     public record Icon(List<String> paths, List<Head> circles) { }
 
+    /**
+     * A sub-path that is nothing but a rule across the width of the box.
+     *
+     * One icon in the pack draws its own ground, and the view draws a floor of
+     * its own and rests the lowest ink on it. Final Rest therefore landed by
+     * that built-in rule instead of by the body: the reclining figure was
+     * pushed clear of the floor line and read as a head and a stray stroke.
+     * The view owns the floor, so an icon's own copy of it is dropped.
+     */
+    private static boolean isOwnGroundLine(String path) {
+        return path.matches("M[.\\d]+ [.\\d]+h[.\\d]+")
+                && Double.parseDouble(path.substring(path.indexOf('h') + 1)) >= 15;
+    }
+
     /** A head, drawn as an outlined circle. */
     public record Head(double centreX, double centreY, double radius) { }
 
@@ -77,7 +91,8 @@ public final class PoseIconCatalog {
         iconsByName = properties.stringPropertyNames().stream()
                 .filter(name -> !name.endsWith(".circles"))
                 .collect(Collectors.toUnmodifiableMap(name -> name, name -> new Icon(
-                        List.of(properties.getProperty(name).split("\\|")),
+                        java.util.Arrays.stream(properties.getProperty(name).split("\\|"))
+                                .filter(path -> !isOwnGroundLine(path)).toList(),
                         heads(properties.getProperty(name + ".circles", "")))));
     }
 

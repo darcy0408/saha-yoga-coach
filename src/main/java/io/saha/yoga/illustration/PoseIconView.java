@@ -50,8 +50,15 @@ public final class PoseIconView extends Pane {
         if (icon == null) return;
         double width = Math.max(90, getWidth());
         double height = Math.max(90, getHeight());
-        double scale = Math.min(width, height) * FILL / BOX;
         double floorY = height - Math.max(9, height * .06);
+
+        // One shared scale keeps a seated figure smaller than a standing one,
+        // as the icons were authored. But the authored box is not a promise:
+        // Final Rest lies right across its box, wider still once stroked, and
+        // at the shared scale it ran off the side of this pane and showed a
+        // head with most of a body missing. Whichever fits is used, so an icon
+        // that outgrows its box is shrunk rather than cropped.
+        double byBox = Math.min(width, height) * FILL / BOX;
 
         var group = new Group();
         for (var data : icon.paths()) {
@@ -59,7 +66,7 @@ public final class PoseIconView extends Pane {
             shape.setContent(data);
             shape.setFill(null);
             shape.setStroke(INK);
-            shape.setStrokeWidth(1.15 / scale);
+            shape.setStrokeWidth(1.15 / byBox);
             shape.setStrokeLineCap(StrokeLineCap.ROUND);
             shape.setStrokeLineJoin(StrokeLineJoin.ROUND);
             group.getChildren().add(shape);
@@ -68,13 +75,22 @@ public final class PoseIconView extends Pane {
             var circle = new Circle(head.centreX(), head.centreY(), head.radius());
             circle.setFill(null);
             circle.setStroke(INK);
-            circle.setStrokeWidth(1.15 / scale);
+            circle.setStrokeWidth(1.15 / byBox);
             group.getChildren().add(circle);
+        }
+        // an unstroked outline has no bounds at all, so the ink is measured
+        // with a line on it, and re-measured if the scale changes underneath
+        var ink = group.getBoundsInLocal();
+        double byInk = Math.min(width * FILL / Math.max(.001, ink.getWidth()),
+                height * FILL / Math.max(.001, ink.getHeight()));
+        double scale = Math.min(byBox, byInk);
+        if (scale < byBox) {
+            for (var node : group.getChildren()) ((javafx.scene.shape.Shape) node).setStrokeWidth(1.15 / scale);
+            ink = group.getBoundsInLocal();
         }
         // A Scale in the transform list pivots on the origin, unlike setScaleX,
         // which pivots on the centre of the bounds and would make the placement
         // below depend on the very bounds it is trying to position.
-        var ink = group.getBoundsInLocal();
         group.getTransforms().add(new Scale(scale, scale));
         group.setTranslateX(width / 2 - (ink.getMinX() + ink.getMaxX()) / 2 * scale);
         group.setTranslateY(floorY - ink.getMaxY() * scale);
