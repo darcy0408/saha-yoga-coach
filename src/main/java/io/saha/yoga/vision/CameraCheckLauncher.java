@@ -32,14 +32,25 @@ public final class CameraCheckLauncher {
         // the device, so probing every backend first would sabotage the one
         // answer that matters - whether practice can get video at all
         practiceCanGetVideo();
-        System.out.println("\nBackend by backend, for detail. Camera indices 0 to " + LAST_INDEX + ", each backend given "
-                + OPEN_DEADLINE_SECONDS + " seconds before it is called hung.\n");
+        // Media Foundation is probed only when asked for. Its open() never
+        // returns on some hardware, and a hung native call left behind by this
+        // process can leave the device unusable for the next launch - which is
+        // exactly the failure this tool exists to diagnose, so doing it by
+        // default would mean the check causing the fault it then reports.
+        boolean everyBackend = args.length > 0 && args[0].equals("--all");
+        var backends = everyBackend
+                ? new Backend[]{new Backend("DirectShow", Videoio.CAP_DSHOW),
+                        new Backend("Media Foundation", Videoio.CAP_MSMF),
+                        new Backend("automatic", Videoio.CAP_ANY)}
+                : new Backend[]{new Backend("DirectShow", Videoio.CAP_DSHOW)};
+        System.out.println("\nDevice by device, for detail. Camera indices 0 to " + LAST_INDEX + ", each backend given "
+                + OPEN_DEADLINE_SECONDS + " seconds before it is called hung.");
+        System.out.println(everyBackend
+                ? "Probing every backend. If a camera stops working afterwards, that is this flag: reboot or unplug it.\n"
+                : "DirectShow only, which is the backend practice uses. Pass --all to probe the others too.\n");
         boolean anyOpened = false;
         for (int index = 0; index <= LAST_INDEX; index++) {
-            for (var backend : new Backend[]{
-                    new Backend("DirectShow", Videoio.CAP_DSHOW),
-                    new Backend("Media Foundation", Videoio.CAP_MSMF),
-                    new Backend("automatic", Videoio.CAP_ANY)}) {
+            for (var backend : backends) {
                 anyOpened |= report(index, backend);
             }
         }

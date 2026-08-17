@@ -64,6 +64,9 @@ tasks.register<JavaExec>("cameraCheck") {
     classpath = sourceSets.main.get().runtimeClasspath
     mainClass = "io.saha.yoga.vision.CameraCheckLauncher"
     jvmArgs("--enable-preview", "--enable-native-access=ALL-UNNAMED")
+    // gradlew cameraCheck --args="--all" to probe every backend, at the risk
+    // of leaving a device wedged by a Media Foundation open that never returns
+    if (project.hasProperty("allBackends")) args("--all")
 }
 
 tasks.register<JavaExec>("chimeCheck") {
