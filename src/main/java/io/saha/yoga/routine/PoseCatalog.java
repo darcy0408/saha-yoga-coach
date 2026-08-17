@@ -14,10 +14,21 @@ public final class PoseCatalog {
     private static final LazyConstant<List<Pose>> POSES = LazyConstant.of(PoseCatalog::buildPoses);
     private final List<Pose> poses = POSES.get();
     private static List<Pose> buildPoses() { return List.of(
-            pose("easy_seat", "Easy Seat", 60, "Sit comfortably, lengthen your spine, and let your breath settle.", "Sit on a folded blanket or a chair if your hips feel tight.", List.of(),
+            // What a single camera can honestly check while someone sits
+            // cross-legged is that the torso is stacked square over the hips
+            // rather than collapsing to one side. It cannot see the length of a
+            // spine - that is depth - so the cue asks about the weight on the
+            // sitting bones, which is what the angle actually measures.
+            pose("easy_seat", "Easy Seat", 60, "Sit comfortably, lengthen your spine, and let your breath settle.", "Sit on a folded blanket or a chair if your hips feel tight.",
+                    List.of(crown("head-over-shoulders", BilateralStrategy.WORST_MATCH, 45, 70,
+                            "Let your head settle level over the middle of your shoulders.",
+                            "Your head has tipped toward one shoulder — bring it back over the middle.")),
                     "Cross your shins comfortably, one in front of the other.",
                     "Rest your hands on your thighs and lengthen up through the crown of your head."),
-            pose("seated_side_reach", "Seated Side Reach", 40, "Reach one arm overhead and lean gently to the side.", "Keep the reach small, or rest the other hand on your thigh.", List.of(),
+            // the lifted arm, measured at the shoulder like the standing reach
+            pose("seated_side_reach", "Seated Side Reach", 40, "Reach one arm overhead and lean gently to the side.", "Keep the reach small, or rest the other hand on your thigh.",
+                    List.of(lift("lifted-arm", BilateralStrategy.MOST_BENT, 20, 80,
+                            "Reach the top arm higher, lifting it away from your ribs.")),
                     "Press down through the sitting bone on the side you are reaching from.",
                     "Reach up first and then over, so the side of your waist lengthens rather than folds."),
             pose("upward_salute", "Upward Salute", 35, "Sweep both arms overhead and lengthen from your hips.", "Take the arms shoulder-width apart, or stop at shoulder height.",
@@ -134,6 +145,32 @@ public final class PoseCatalog {
     /** {@code deeperThanRange} is said when the torso has folded or arched past the range. */
     private static AlignmentRule torso(String id, BilateralStrategy strategy, double min, double max, String cue, String deeperThanRange) {
         return new AlignmentRule(id, LandmarkName.LEFT_SHOULDER, LandmarkName.LEFT_HIP, LandmarkName.LEFT_KNEE, strategy, min, max, cue, deeperThanRange, 1, true);
+    }
+
+    /**
+     * Rules for a body sitting on the floor, which must not ask to see a hip.
+     *
+     * Sitting cross-legged puts the thighs across the hip joints, and the model
+     * scores them near zero however far back you sit - so a seated pose measured
+     * from the hip cannot be measured at all, and would spend the whole hold
+     * saying the hips are out of view instead of coaching. These take their
+     * bearing from the head and shoulders, which stay in plain sight.
+     *
+     * The angle at a shoulder, between the head and the other shoulder: it
+     * moves several degrees for every hundredth the head leans, so a head
+     * settled in the middle is measurably different from one tipped onto a
+     * shoulder.
+     */
+    private static AlignmentRule crown(String id, BilateralStrategy strategy, double min, double max, String cue, String pastRange) {
+        return new AlignmentRule(id, LandmarkName.NOSE, LandmarkName.LEFT_SHOULDER, LandmarkName.RIGHT_SHOULDER, strategy, min, max, cue, pastRange, 2, true);
+    }
+
+    /**
+     * The angle at the shoulder between the head and the elbow: how far an arm
+     * has lifted, judged against the body's own upright rather than a hip.
+     */
+    private static AlignmentRule lift(String id, BilateralStrategy strategy, double min, double max, String cue) {
+        return new AlignmentRule(id, LandmarkName.NOSE, LandmarkName.LEFT_SHOULDER, LandmarkName.LEFT_ELBOW, strategy, min, max, cue, "", 2, true);
     }
 
     /** Measured and shown, never judged - for shapes where no single angle is correct. */

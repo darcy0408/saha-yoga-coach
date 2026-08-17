@@ -23,10 +23,11 @@ class PoseAnalyzerTest {
         assertInstanceOf(AnalysisResult.Unreliable.class, new PoseAnalyzer().analyze(pose, new LandmarkFrame(Instant.now(), map)));
     }
 
+    /** A twist is a rotation about the spine, which one flat view cannot measure. */
     @Test void poseWithoutRulesIsExplicitlyInstructionOnly() {
         var source = new DemoLandmarkSource();
-        source.selectPose("easy_seat");
-        var result = new PoseAnalyzer().analyze(new PoseCatalog().require("easy_seat"), source.targetFrame());
+        source.selectPose("seated_twist");
+        var result = new PoseAnalyzer().analyze(new PoseCatalog().require("seated_twist"), source.targetFrame());
         var instruction = assertInstanceOf(AnalysisResult.InstructionOnly.class, result);
         assertTrue(instruction.guidance().contains("not available"));
     }

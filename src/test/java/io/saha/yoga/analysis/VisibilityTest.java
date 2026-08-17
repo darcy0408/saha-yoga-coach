@@ -51,9 +51,10 @@ class VisibilityTest {
 
     @Test void aSeatedPoseCoachesWithTheFeetOutOfFrame() {
         // the exact situation on camera: torso tracked well, feet below the
-        // bottom edge. Easy Seat measures no angles, so it must still run.
+        // bottom edge. Easy Seat is measured at the head and shoulders, which
+        // are still in plain view, so it must go on coaching.
         var result = analyzer.analyze(catalog.require("easy_seat"), frame(.92, .05, .05));
-        assertInstanceOf(AnalysisResult.InstructionOnly.class, result);
+        assertInstanceOf(AnalysisResult.Reliable.class, result);
     }
 
     @Test void aPoseThatMeasuresKneesStillNeedsToSeeALeg() {
@@ -77,8 +78,10 @@ class VisibilityTest {
     }
 
     @Test void sittingCrossLeggedDoesNotDemandTheHips() {
-        // thighs cross the hip joints when seated, so the model scores them low
-        // however far back you sit. Easy Seat measures nothing, so it must run.
+        // Thighs cross the hip joints when seated, so the model scores them low
+        // however far back you sit. Easy Seat must therefore be measured from
+        // something else entirely - it takes its bearing from the head and
+        // shoulders - and must go on coaching with the hips as good as unseen.
         var p = new EnumMap<LandmarkName, Landmark>(LandmarkName.class);
         var seen = frame(.9, .9, .9).landmarks();
         seen.forEach((name, mark) -> {
@@ -86,6 +89,6 @@ class VisibilityTest {
             p.put(name, new Landmark(mark.x(), mark.y(), confidence));
         });
         var result = analyzer.analyze(catalog.require("easy_seat"), new LandmarkFrame(Instant.now(), p));
-        assertInstanceOf(AnalysisResult.InstructionOnly.class, result);
+        assertInstanceOf(AnalysisResult.Reliable.class, result);
     }
 }
