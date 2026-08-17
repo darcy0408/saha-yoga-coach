@@ -45,7 +45,15 @@ public final class PoseCatalog {
                     List.of(torso("body-line", BilateralStrategy.WORST_MATCH, 150, 180, "Your hips are dropping or lifting — try drawing them back into one long line.")),
                     "From hands and knees, stack your shoulders directly over your wrists.",
                     "Step back one foot at a time, and press the floor away beneath you."),
-            pose("locust", "Locust", 40, "Lying face down, lift your chest and legs a comfortable amount.", "Lift only the chest, or only the legs, and keep it small.", List.of(),
+            // A pose done face down is the one where the screen cannot be seen
+            // at all, so it is the one that most needs to be heard. It carried
+            // no rule, so it could never say anything: the lift is the whole
+            // pose, and lying flat opens this angle past its range while a
+            // comfortable lift closes it.
+            pose("locust", "Locust", 40, "Lying face down, lift your chest and legs a comfortable amount.", "Lift only the chest, or only the legs, and keep it small.",
+                    List.of(torso("body-lift", BilateralStrategy.WORST_MATCH, 140, 175,
+                            "Try lifting your chest and legs a little higher.",
+                            "That is a deeper backbend than this pose asks for — lower a little and lengthen instead.")),
                     "Lie face down with your arms alongside your body and your forehead resting down.",
                     "Lift your chest and legs on an in-breath, keeping the back of your neck long."),
             pose("seated_twist", "Seated Twist", 50, "Sit tall and turn gently from the middle of your spine.", "Turn only partway, or sit on a folded blanket.", List.of(),
@@ -120,7 +128,12 @@ public final class PoseCatalog {
      * angle being wrong.
      */
     private static AlignmentRule torso(String id, BilateralStrategy strategy, double min, double max, String cue) {
-        return new AlignmentRule(id, LandmarkName.LEFT_SHOULDER, LandmarkName.LEFT_HIP, LandmarkName.LEFT_KNEE, strategy, min, max, cue, "", 1, true);
+        return torso(id, strategy, min, max, cue, "");
+    }
+
+    /** {@code deeperThanRange} is said when the torso has folded or arched past the range. */
+    private static AlignmentRule torso(String id, BilateralStrategy strategy, double min, double max, String cue, String deeperThanRange) {
+        return new AlignmentRule(id, LandmarkName.LEFT_SHOULDER, LandmarkName.LEFT_HIP, LandmarkName.LEFT_KNEE, strategy, min, max, cue, deeperThanRange, 1, true);
     }
 
     /** Measured and shown, never judged - for shapes where no single angle is correct. */
