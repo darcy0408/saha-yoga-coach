@@ -96,6 +96,13 @@ public final class SahaApp extends Application {
     private final AtomicReference<CameraFrame> pendingCameraFrame = new AtomicReference<>();
     private final AtomicBoolean cameraRenderPending = new AtomicBoolean();
     private volatile boolean livePreviewActive;
+    /** How many raw device indices the switch button cycles through. */
+    private static final int CAMERA_DEVICES = 4;
+    /** Raw OS device index. Which physical camera it means is the OS's choice, so it is selectable. */
+    private int cameraDevice;
+    private Button switchCameraButton;
+    /** Why estimation is off, when the picture is running without it. Empty while it is working. */
+    private String modelFallbackReason = "";
 
     @Override public void start(Stage primaryStage) {
         stage = primaryStage; stage.setTitle("Saha · personal yoga coach");
@@ -149,10 +156,23 @@ public final class SahaApp extends Application {
         var badge = new Label("DEMO COACHING · local camera preview optional"); badge.getStyleClass().add("badge");
         cameraStatus = new Label("No camera is opened unless you choose the preview below."); cameraStatus.setWrapText(true); cameraStatus.setMinHeight(Region.USE_PREF_SIZE);
         var note = new Label("Camera preview stays on this device and is never recorded. Until a verified ONNX pose model is installed, coaching continues with synthetic demonstration landmarks and does not claim to analyze the preview."); note.setWrapText(true);
-        cameraButton = new Button("Try local camera preview"); cameraButton.setOnAction(e -> startCameraPreview(0));
+        cameraButton = new Button("Try local camera preview"); cameraButton.setOnAction(e -> startCameraPreview(cameraDevice));
+        // Which physical camera index 0 means is the operating system's choice,
+        // not ours. A machine with a virtual camera - streaming software, a
+        // conferencing tool - can hand back a placeholder image with nobody in
+        // it, and the coach then looks broken while behaving perfectly. This
+        // cycles rather than listing: no device is probed to build a list,
+        // because opening a camera to discover it exists is still opening it.
+        switchCameraButton = new Button(switchCameraLabel());
+        switchCameraButton.setOnAction(e -> {
+            cameraDevice = (cameraDevice + 1) % CAMERA_DEVICES;
+            switchCameraButton.setText(switchCameraLabel());
+            if (livePreviewActive || cameraSource != null) startCameraPreview(cameraDevice);
+            else cameraStatus.setText("Camera " + cameraDevice + " will be used when you start the preview.");
+        });
         var begin = new Button("Start Steady Start"); begin.getStyleClass().add("primary"); begin.setOnAction(e -> beginRoutine());
         var review = new Button("Review licensed pose candidates"); review.setOnAction(e -> showPoseGallery());
-        var left = new VBox(18, title, guide, badge, cameraStatus, note, cameraButton, new HBox(10, begin, review)); left.setMaxWidth(520);
+        var left = new VBox(18, title, guide, badge, cameraStatus, note, new HBox(10, cameraButton, switchCameraButton), new HBox(10, begin, review)); left.setMaxWidth(520);
         var page = new BorderPane(previewStack, null, null, null, left); page.setPadding(new Insets(50)); BorderPane.setMargin(left, new Insets(0, 35, 0, 0)); page.getStyleClass().add("page");
         drawFrame(landmarks.nextFrame()); setPage(page);
     }
@@ -163,9 +183,10 @@ public final class SahaApp extends Application {
         cameraStatus.getStyleClass().add("camera-status-active");
         cameraButton.setDisable(true);
         cameraButton.setText("Opening camera...");
-        var withModel = CameraLandmarkSource.ifModelPresent(deviceIndex);
-        if (withModel.isPresent()) {
-            cameraSource = withModel.get();
+        var startup = CameraLandmarkSource.open(deviceIndex);
+        modelFallbackReason = describe(startup);
+        if (startup instanceof CameraLandmarkSource.Startup.Ready ready) {
+            cameraSource = ready.source();
             landmarks = cameraSource;
             landmarks.selectPose(routine == null ? "easy_seat" : current().pose().id());
             cameraSource.start(this::showCameraFrame,
@@ -182,6 +203,10 @@ public final class SahaApp extends Application {
             startOpenTimeout();
             return;
         }
+        // Falling back to a picture-only preview is fine, but it must say why:
+        // this screen used to claim "the pose model is not connected yet"
+        // whether the weights were absent or present and broken.
+        cameraStatus.setText(modelFallbackReason);
         cameraCapture = new OpenCvCameraCapture(deviceIndex);
         cameraCapture.start(this::showCameraFrame,
                 message -> Platform.runLater(() -> cameraStatus.setText(message)),
@@ -194,6 +219,21 @@ public final class SahaApp extends Application {
         }));
         startOpenTimeout();
     }
+
+    /** Why landmark estimation is off, in words someone can act on. */
+    private String describe(CameraLandmarkSource.Startup startup) {
+        return switch (startup) {
+            case CameraLandmarkSource.Startup.Ready ignored -> "";
+            case CameraLandmarkSource.Startup.NoModel none ->
+                    "No pose model installed, so the picture is shown but not measured. Run scripts\\fetch-model.ps1 to enable it. Looked in: "
+                            + none.searched().stream().map(Path::toString).reduce((a, b) -> a + "; " + b).orElse("nowhere");
+            case CameraLandmarkSource.Startup.Unusable broken ->
+                    "A pose model is installed at " + broken.model() + " but could not be loaded, so the picture is shown but not measured: "
+                            + broken.reason() + " Re-run scripts\\fetch-model.ps1 to replace it.";
+        };
+    }
+
+    private String switchCameraLabel() { return "Using camera " + cameraDevice + " · switch"; }
 
     private void startOpenTimeout() {
         cameraOpenTimeout = new PauseTransition(Duration.seconds(8));
@@ -380,7 +420,8 @@ public final class SahaApp extends Application {
     private void tick() {
         if (livePreviewActive && cameraSource == null) {
             statusLabel.setText("Status: Live preview — alignment not analyzed");
-            suggestionLabel.setText("Guidance: Follow the written teaching guide. Saha can display your camera, but the pose model is not connected yet.");
+            suggestionLabel.setText("Guidance: Follow the written teaching guide. "
+                    + (modelFallbackReason.isEmpty() ? "Saha can display your camera, but the pose model is not connected yet." : modelFallbackReason));
             optionalLabel.setText("Optional adjustment: " + current().pose().modifications().getFirst());
             confidenceLabel.setText("Camera: Active · alignment confidence unavailable");
             if (!paused && ++clockTicks % 10 == 0 && --remaining <= 0) advance(false);

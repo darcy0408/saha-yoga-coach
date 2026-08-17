@@ -2,10 +2,10 @@ package io.saha.yoga.vision;
 
 import io.saha.yoga.domain.LandmarkFrame;
 
-import java.nio.file.Files;
 import java.nio.file.Path;
 import java.time.Instant;
 import java.util.EnumMap;
+import java.util.List;
 import java.util.Optional;
 import java.util.concurrent.atomic.AtomicReference;
 import java.util.function.Consumer;
@@ -24,8 +24,22 @@ import java.util.function.Consumer;
  * to synthetic landmarks.
  */
 public final class CameraLandmarkSource implements LandmarkSource {
-    /** Where the verified model is expected; absent means the coach stays in demo mode. */
-    public static final Path MODEL = Path.of("models", "movenet-singlepose-lightning.onnx");
+    /**
+     * What happened when the coach tried to start estimating landmarks.
+     *
+     * These used to be one empty Optional between them. A missing weights file
+     * is expected on a fresh clone and demo mode is the right answer; a model
+     * that exists but will not load is a broken install, and telling someone
+     * the same thing in both cases leaves them nothing to act on.
+     */
+    public sealed interface Startup {
+        /** The model loaded; the source is built but not yet started. */
+        record Ready(CameraLandmarkSource source, Path model) implements Startup {}
+        /** No weights anywhere they were looked for. Expected before the fetch script runs. */
+        record NoModel(List<Path> searched) implements Startup {}
+        /** Weights are on disk but unusable - wrong file, bad export, no native runtime. */
+        record Unusable(Path model, String reason) implements Startup {}
+    }
 
     private final CameraCapture capture;
     private final PoseEstimator estimator;
@@ -35,13 +49,25 @@ public final class CameraLandmarkSource implements LandmarkSource {
     private volatile String description = "Camera landmarks · starting";
     private volatile boolean failed;
 
-    /** Present only when a verified model file is actually on disk. */
-    public static Optional<CameraLandmarkSource> ifModelPresent(int deviceIndex) {
-        if (!Files.isRegularFile(MODEL)) return Optional.empty();
+    /**
+     * Builds a camera source for {@code deviceIndex}, or explains why it could not.
+     *
+     * The exception is turned into a sentence rather than swallowed: an ONNX
+     * runtime that will not initialise, a truncated download and a model whose
+     * tensors are not what the estimator expects all land here, and all three
+     * used to look exactly like "no model installed".
+     */
+    public static Startup open(int deviceIndex) {
+        var model = PoseModelLocator.locate();
+        if (model.isEmpty()) return new Startup.NoModel(PoseModelLocator.candidates());
+        var path = model.get();
         try {
-            return Optional.of(new CameraLandmarkSource(new OpenCvCameraCapture(deviceIndex), new PoseEstimator(MODEL)));
-        } catch (Exception e) {
-            return Optional.empty();
+            return new Startup.Ready(new CameraLandmarkSource(new OpenCvCameraCapture(deviceIndex), new PoseEstimator(path)), path);
+        } catch (Throwable error) {
+            // Throwable, not Exception: a missing native library arrives as an
+            // UnsatisfiedLinkError, which is exactly the case worth reporting.
+            var message = error.getMessage();
+            return new Startup.Unusable(path, message == null || message.isBlank() ? error.getClass().getSimpleName() : message);
         }
     }
 

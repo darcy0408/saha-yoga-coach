@@ -29,22 +29,26 @@ class PoseEstimatorTest {
         return new CameraFrame(width, height, pixels);
     }
 
+    private java.nio.file.Path model() {
+        return PoseModelLocator.locate().orElse(java.nio.file.Path.of("models", PoseModelLocator.FILE_NAME));
+    }
+
     private void assumeModel() {
-        Assumptions.assumeTrue(Files.isRegularFile(CameraLandmarkSource.MODEL),
+        Assumptions.assumeTrue(Files.isRegularFile(model()),
                 "verified model absent; run scripts/fetch-model.ps1");
         nu.pattern.OpenCV.loadLocally();
     }
 
     @Test void modelDeclaresTheExpectedSquareInput() throws Exception {
         assumeModel();
-        try (var estimator = new PoseEstimator(CameraLandmarkSource.MODEL)) {
+        try (var estimator = new PoseEstimator(model())) {
             assertEquals(192, estimator.inputSide(), "MoveNet SinglePose Lightning takes a 192x192 input");
         }
     }
 
     @Test void everyLandmarkTheCoachNeedsIsProducedInRange() throws Exception {
         assumeModel();
-        try (var estimator = new PoseEstimator(CameraLandmarkSource.MODEL)) {
+        try (var estimator = new PoseEstimator(model())) {
             var frame = estimator.estimate(syntheticFrame(640, 480));
             for (var name : LandmarkName.values()) {
                 var mark = frame.landmarks().get(name);
@@ -58,7 +62,7 @@ class PoseEstimatorTest {
 
     @Test void handsAndToesContinuePastTheJointsTheModelEmits() throws Exception {
         assumeModel();
-        try (var estimator = new PoseEstimator(CameraLandmarkSource.MODEL)) {
+        try (var estimator = new PoseEstimator(model())) {
             var p = estimator.estimate(syntheticFrame(640, 480)).landmarks();
             // MoveNet has no hand or toe keypoint, so they are placed along the
             // limb's own direction rather than invented from nothing
@@ -71,7 +75,7 @@ class PoseEstimatorTest {
 
     @Test void aspectRatioIsPreservedSoJointAnglesSurvive() throws Exception {
         assumeModel();
-        try (var estimator = new PoseEstimator(CameraLandmarkSource.MODEL)) {
+        try (var estimator = new PoseEstimator(model())) {
             // Both axes are divided by the frame width, so on a 4:3 frame nothing
             // can land below 0.75 - the guarantee that keeps a ninety-degree knee
             // from reading as something else.
