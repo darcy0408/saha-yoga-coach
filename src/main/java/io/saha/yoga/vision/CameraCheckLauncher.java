@@ -26,12 +26,18 @@ public final class CameraCheckLauncher {
     private static final long OPEN_DEADLINE_SECONDS = 6;
 
     public static void main(String[] args) {
-        System.out.println("Loading the local OpenCV camera library...");
-        OpenCV.loadLocally();
-        // the real capture class runs first: a backend that hangs keeps holding
-        // the device, so probing every backend first would sabotage the one
-        // answer that matters - whether practice can get video at all
+        // The real capture class runs first, and deliberately before OpenCV is
+        // loaded here, so it loads the library itself exactly as practice does.
+        // Pre-loading hid a capture loop that built a Mat before its native
+        // library existed: the check passed while the application died on
+        // UnsatisfiedLinkError at the first frame.
+        //
+        // Running it first also protects the answer that matters. A backend
+        // that hangs keeps holding the device, so probing backends beforehand
+        // would sabotage the one question worth asking - can practice get video.
         practiceCanGetVideo();
+        System.out.println("\nLoading the local OpenCV camera library...");
+        OpenCV.loadLocally();
         // Media Foundation is probed only when asked for. Its open() never
         // returns on some hardware, and a hung native call left behind by this
         // process can leave the device unusable for the next launch - which is

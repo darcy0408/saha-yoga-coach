@@ -70,11 +70,16 @@ public final class OpenCvCameraCapture implements CameraCapture {
     private static final int MISSES_BEFORE_GIVING_UP = 150;
 
     private void captureLoop(Consumer<CameraFrame> frames, Consumer<String> status, Consumer<String> failures) {
-        var bgr = new Mat();
-        var bgra = new Mat();
+        // declared here so the finally can release them, but constructed only
+        // after loadLocally(): a Mat is a handle to native memory, and building
+        // one before its library is loaded throws UnsatisfiedLinkError
+        Mat bgr = null;
+        Mat bgra = null;
         try {
             status.accept("Loading the local OpenCV camera library...");
             OpenCV.loadLocally();
+            bgr = new Mat();
+            bgra = new Mat();
             if (!openAWorkingBackend(bgr, status)) {
                 failures.accept("Camera " + deviceIndex + " could not deliver any video. Close anything else using the camera"
                         + " (Teams, Zoom, or a browser tab), or check Settings · Privacy & security · Camera · Let desktop apps access your camera."
@@ -101,8 +106,8 @@ public final class OpenCvCameraCapture implements CameraCapture {
         } catch (Throwable error) {
             failures.accept("Local camera preview is unavailable: " + safeMessage(error));
         } finally {
-            bgr.release();
-            bgra.release();
+            if (bgr != null) bgr.release();
+            if (bgra != null) bgra.release();
             running.set(false);
             var current = camera;
             if (current != null) current.release();
