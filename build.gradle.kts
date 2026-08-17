@@ -58,6 +58,14 @@ tasks.register<JavaExec>("colourCheck") {
     jvmArgs("--enable-preview", "--enable-native-access=ALL-UNNAMED")
 }
 
+tasks.register<JavaExec>("chimeCheck") {
+    group = "verification"
+    description = "Plays the pose-came-right chime, and reports whether this machine can play it"
+    classpath = sourceSets.main.get().runtimeClasspath
+    mainClass = "io.saha.yoga.sound.ChimeCheckLauncher"
+    jvmArgs("--enable-preview", "--enable-native-access=ALL-UNNAMED")
+}
+
 tasks.register<JavaExec>("routineSnapshot") {
     group = "verification"
     description = "Renders the generated practice in order to build/review/routine.png"

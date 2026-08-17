@@ -54,6 +54,34 @@ class PoseAnalyzerTest {
         }
     }
 
+    /**
+     * The chime rings on the frame a measured pose crosses into range, so this
+     * pins the condition that rings it rather than the sound itself.
+     *
+     * Without this, a reference pose drifting out of its own range is silent in
+     * two ways at once: no ding, and no failing test either. That is exactly
+     * what happened when both warriors were authored into a lunge shallower
+     * than their rule allows.
+     */
+    @Test void aMeasuredPoseHeldOnItsReferenceReachesTheStateThatRingsTheChime() {
+        var source = new DemoLandmarkSource();
+        var analyzer = new PoseAnalyzer();
+        // an ungraded pose is excluded on purpose rather than overlooked:
+        // cat-cow is a movement between two correct positions, so it is
+        // measured and shown but never judged, and must never ding
+        var measured = new PoseCatalog().all().stream()
+                .filter(pose -> pose.alignmentRules().stream().anyMatch(AlignmentRule::graded)).toList();
+        assertFalse(measured.isEmpty(), "no measured poses to check");
+        for (var pose : measured) {
+            source.selectPose(pose.id());
+            var reliable = assertInstanceOf(AnalysisResult.Reliable.class, analyzer.analyze(pose, source.targetFrame()), pose.id());
+            // the same predicate the practice screen uses to ring it
+            boolean aligned = reliable.suggestions().isEmpty()
+                    && reliable.measurements().stream().anyMatch(AnalysisResult.Measurement::inRange);
+            assertTrue(aligned, () -> pose.id() + " can never ring the chime: " + reliable.status() + " " + reliable.suggestions());
+        }
+    }
+
     @Test void deliberateChairKneeDeviationProducesTheExpectedCue() {
         var source = new DemoLandmarkSource();
         var pose = new PoseCatalog().require("chair");
