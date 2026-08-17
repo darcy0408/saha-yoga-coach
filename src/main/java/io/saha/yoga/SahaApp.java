@@ -356,7 +356,9 @@ public final class SahaApp extends Application {
         poseLabel = new Label(); poseLabel.setWrapText(true); poseLabel.setMinHeight(Region.USE_PREF_SIZE); poseLabel.getStyleClass().add("hero-small"); phaseLabel = new Label(); phaseLabel.getStyleClass().add("badge");
         statusLabel = wrapLabel(); statusLabel.getStyleClass().add("status"); suggestionLabel = wrapLabel(); optionalLabel = wrapLabel(); confidenceLabel = wrapLabel(); timerLabel = new Label(); timerLabel.getStyleClass().add("timer");
         measurementLabel = wrapLabel(); measurementLabel.getStyleClass().add("measurement");
-        teachingView = new VBox(10); teachingView.setPrefSize(560, 190); teachingView.setMinHeight(170); teachingView.setMaxHeight(210); teachingView.getStyleClass().add("teaching-view");
+        // tall enough to hold the card it is given: below this the illustration
+        // and the licence badge drew outside the card, over the panel beneath
+        teachingView = new VBox(8); teachingView.setPrefSize(560, 215); teachingView.setMinHeight(200); teachingView.setMaxHeight(230); teachingView.getStyleClass().add("teaching-view");
         bodyView = createBodyView(); bodyView.setPrefSize(560, 420);
         cameraPreview = new ImageView(); cameraPreview.setPreserveRatio(true); cameraPreview.setVisible(livePreviewActive);
         cameraPreview.setScaleX(mirrorPreview ? -1 : 1);
@@ -536,36 +538,44 @@ public final class SahaApp extends Application {
         if (teachingView == null) return;
         teachingView.getChildren().clear();
         var heading = new Label("TEACHING GUIDE"); heading.getStyleClass().add("badge");
-        var title = new Label(item.pose().displayName()); title.getStyleClass().add("teaching-pose-name");
+        // the pose name is already the headline of the feedback panel beside
+        // this card, so here it is a caption rather than a second hero
+        var title = new Label(item.pose().displayName()); title.getStyleClass().addAll("teaching-pose-name", "compact");
         var instruction = new Label(item.pose().instructions().getFirst()); instruction.setWrapText(true); instruction.setMinHeight(Region.USE_PREF_SIZE); instruction.getStyleClass().add("teaching-instruction");
         var icon = poseIcons.forPose(item.pose().id());
         var asset = icon.isPresent() ? Optional.<TeachingAsset>empty() : teachingAssets.enabledForCoaching(item.pose().id());
         boolean illustrated = icon.isPresent() || asset.isPresent();
         var status = illustrations.status(item.pose().id());
-        var review = new Label(asset.map(TeachingAsset::reviewNote)
-                .orElseGet(() -> status.map(value -> value.requiredView() + " · visual " + value.reviewState().name().toLowerCase().replace('_', ' ')).orElse("Written guidance only · illustration not yet reviewed")));
-        review.setWrapText(true); review.setMinHeight(Region.USE_PREF_SIZE); review.getStyleClass().add("teaching-review");
+        // Provenance and floor contact are one footnote rather than two stacked
+        // lines. Every claim the card used to make it still makes; five separate
+        // blocks simply did not fit the height coaching can spare, and the
+        // illustration was spilling past the card onto the panel below.
+        var provenance = new Label(asset.map(TeachingAsset::reviewNote)
+                .orElseGet(() -> status.map(value -> value.requiredView() + " · visual " + value.reviewState().name().toLowerCase().replace('_', ' ')).orElse("Written guidance only · illustration not yet reviewed"))
+                + " · " + status.map(value -> "on the floor: " + value.grounding().requiredContacts().stream().map(contact -> contact.name().toLowerCase().replace('_', ' ')).sorted().reduce((a, b) -> a + ", " + b).orElse("not defined")).orElse("floor contact still being defined"));
+        provenance.setWrapText(true); provenance.setMinHeight(Region.USE_PREF_SIZE); provenance.getStyleClass().add("teaching-review");
         var boundary = new Label(illustrated
                 ? "License-verified reference illustration"
                 : "Illustration under review. Follow the written setup or skip this pose.");
         boundary.setWrapText(true); boundary.setMinHeight(Region.USE_PREF_SIZE); boundary.getStyleClass().add(illustrated ? "visual-approved" : "visual-review-warning");
-        var support = new Label(status.map(value -> "On the floor: " + value.grounding().requiredContacts().stream().map(contact -> contact.name().toLowerCase().replace('_', ' ')).sorted().reduce((a, b) -> a + ", " + b).orElse("not defined")).orElse("Floor contact is still being defined."));
-        support.setWrapText(true); support.setMinHeight(Region.USE_PREF_SIZE); support.getStyleClass().add("support-label");
-        var text = new VBox(10, title, instruction, review, boundary, support);
+        var text = new VBox(6, title, instruction, provenance, boundary);
         HBox.setHgrow(text, Priority.ALWAYS);
         var body = new HBox(14, text);
         icon.ifPresent(value -> {
             var view = new PoseIconView();
             view.show(value);
-            view.setMinSize(180, 180); view.setPrefSize(200, 200);
+            view.setMinSize(120, 120); view.setPrefSize(130, 130);
+            // the credit wraps rather than ellipsing: an attribution cut off at
+            // "Atlas Icons · Ramy ..." is not the attribution the licence asks for
             var credit = new Label(PoseIconCatalog.CREDIT); credit.getStyleClass().add("support-label");
+            credit.setWrapText(true); credit.setMinHeight(Region.USE_PREF_SIZE); credit.setMaxWidth(140);
             var iconColumn = new VBox(4, view, credit); iconColumn.setAlignment(Pos.CENTER);
             body.getChildren().add(iconColumn);
         });
         asset.ifPresent(value -> {
             var stream = Objects.requireNonNull(SahaApp.class.getResourceAsStream(value.resourcePath()));
             var art = new ImageView(new Image(stream));
-            art.setPreserveRatio(true); art.setFitWidth(200); art.setFitHeight(180);
+            art.setPreserveRatio(true); art.setFitWidth(150); art.setFitHeight(125);
             var artPane = new StackPane(art); artPane.getStyleClass().add("licensed-art-canvas");
             var credit = new Label("CC0 · " + value.creator()); credit.getStyleClass().add("support-label");
             var artColumn = new VBox(4, artPane, credit); artColumn.setAlignment(Pos.CENTER);
@@ -609,6 +619,7 @@ public final class SahaApp extends Application {
         if (clock != null) clock.stop();
         stopCameraPreview();
         spoken.finish(completed).ifPresent(voice::say);
+        if (completed) chime.play();
         showProgress(completed);
     }
 
@@ -616,7 +627,7 @@ public final class SahaApp extends Application {
         List<SessionMetric> history; try { history = store.load(); } catch (IOException e) { history = List.of(); }
         long completedPoses = history.stream().filter(m -> !m.skipped()).count();
         double stability = history.stream().mapToDouble(SessionMetric::stability).average().orElse(0);
-        var title = new Label(completed ? "Practice complete" : "Practice stopped"); title.getStyleClass().add("hero");
+        var title = new Label(completed ? "You finished the whole practice" : "Practice stopped"); title.getStyleClass().add("hero");
         var stats = new HBox(16, stat("POSES COMPLETED", Long.toString(completedPoses)), stat("AVERAGE STABILITY", Math.round(stability * 100) + "%"), stat("LOCAL RECORDS", Integer.toString(history.size())));
         var privacy = new Label("Only derived session metrics are stored locally. No images or landmark coordinates are saved."); privacy.setWrapText(true);
         var delete = new Button("Delete all local history"); delete.setOnAction(e -> { try { store.deleteAll(); showProgress(completed); } catch (IOException ex) { privacy.setText("Could not delete local history: " + ex.getMessage()); } });
@@ -646,14 +657,26 @@ public final class SahaApp extends Application {
     // A friendlier figure: warm lit joints, rounded limbs, and a face that
     // looks back at you. Someone holding a pose for fifty seconds is looking at
     // this, so it may as well be good company.
-    private static final Color LIMB = Color.web("#5fb9a6");
-    private static final Color JOINT = Color.web("#ffd489");
-    private static final Color SKIN = Color.web("#f0dcae");
-    private static final Color INK = Color.web("#1d4d47");
-    /** The target shape: present enough to aim at, quiet enough not to be mistaken for you. */
-    private static final Color GUIDE = Color.web("#cfe9d8", .62);
+    // Neon: the body you are moving should be the brightest thing on screen.
+    private static final Color LIMB = Color.web("#2bf5cf");
+    private static final Color JOINT = Color.web("#ffc94a");
+    /** The head carries the joints' own light, so the face reads as lit rather than painted on. */
+    private static final Color SKIN = JOINT;
+    private static final Color INK = Color.web("#10322e");
+    /**
+     * The target shape, deliberately dim.
+     *
+     * It was competing with the live body for attention, which inverted the
+     * point: the thing you are doing should be what catches the eye, and the
+     * target should be a quiet suggestion behind it.
+     */
+    private static final Color GUIDE = Color.web("#4d6f68", .40);
     /** The links the guide figure draws; hands and toes are left off so it stays a clean shape. */
     private static final List<LandmarkName[]> GUIDE_LINKS = List.of(
+            new LandmarkName[]{LandmarkName.LEFT_ANKLE,LandmarkName.LEFT_TOE},
+            new LandmarkName[]{LandmarkName.RIGHT_ANKLE,LandmarkName.RIGHT_TOE},
+            new LandmarkName[]{LandmarkName.LEFT_WRIST,LandmarkName.LEFT_HAND},
+            new LandmarkName[]{LandmarkName.RIGHT_WRIST,LandmarkName.RIGHT_HAND},
             new LandmarkName[]{LandmarkName.LEFT_SHOULDER,LandmarkName.RIGHT_SHOULDER},
             new LandmarkName[]{LandmarkName.LEFT_HIP,LandmarkName.RIGHT_HIP},
             new LandmarkName[]{LandmarkName.LEFT_SHOULDER,LandmarkName.LEFT_HIP},
@@ -848,8 +871,8 @@ public final class SahaApp extends Application {
         double headRadiusX=headRadius*.84, headRadiusY=headRadius*1.08;
         var head = new Ellipse(headCenterX, headCenterY, headRadiusX, headRadiusY);
         head.setFill(SKIN);
-        head.setStroke(INK); head.setStrokeWidth(Math.max(4, scale * .014));
-        head.setEffect(glow(JOINT.deriveColor(0, 1, 1, .5), headRadius * .9));
+        head.setStroke(JOINT); head.setStrokeWidth(Math.max(4, scale * .014));
+        head.setEffect(glow(JOINT, headRadius * 1.1));
         double shoulderX = mapX.applyAsDouble((leftShoulder.x()+rightShoulder.x())/2);
         double shoulderY = offsetY+((leftShoulder.y()+rightShoulder.y())/2)*scale;
         double dx=shoulderX-headCenterX,dy=shoulderY-headCenterY;
@@ -925,6 +948,16 @@ public final class SahaApp extends Application {
             circle.getStrokeDashArray().addAll(width * 2.4, width * 1.8);
             bodyView.getChildren().add(circle);
         }
+        // the ankles are where a pose is won or lost, so the target marks them
+        // the same way your own joints are marked
+        for (var ankle : List.of(LandmarkName.LEFT_ANKLE, LandmarkName.RIGHT_ANKLE)) {
+            var point = target.get(ankle);
+            if (point == null) continue;
+            var at = place.apply(point);
+            var mark = new Circle(at[0], at[1], Math.max(3, width * .9), JOINT.deriveColor(0, 1, 1, .55));
+            mark.setEffect(glow(JOINT.deriveColor(0, 1, 1, .5), width * 2.2));
+            bodyView.getChildren().add(mark);
+        }
     }
 
     private double[] midpointOf(java.util.Map<LandmarkName, Landmark> points, LandmarkName left, LandmarkName right) {
@@ -992,11 +1025,9 @@ public final class SahaApp extends Application {
                 smile(x + vx * radius * .16, y + radius * .12 + vy * radius * .10, radius * .40, stroke, startAngle, 110));
     }
 
-    /** The face carries the same warm light as the joints, so it reads as lit rather than stamped on. */
+    /** Dark features on the lit head; the head's own glow is what carries the face. */
     private Circle eye(double x, double y, double headRadius) {
-        var dot = new Circle(x, y, Math.max(2, headRadius * .10), INK);
-        dot.setEffect(glow(JOINT, headRadius * .34));
-        return dot;
+        return new Circle(x, y, Math.max(2, headRadius * .10), INK);
     }
 
     private javafx.scene.shape.Arc smile(double x, double y, double radius, double stroke, double start, double extent) {
@@ -1006,7 +1037,6 @@ public final class SahaApp extends Application {
         arc.setStroke(INK);
         arc.setStrokeWidth(stroke);
         arc.setStrokeLineCap(javafx.scene.shape.StrokeLineCap.ROUND);
-        arc.setEffect(glow(JOINT, radius * .5));
         return arc;
     }
 

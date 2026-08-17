@@ -1,19 +1,16 @@
 package io.saha.yoga.illustration;
 
+import io.saha.yoga.domain.RoutineItem;
+import io.saha.yoga.routine.PoseCatalog;
 import javafx.application.Application;
 import javafx.application.Platform;
 import javafx.geometry.Insets;
-import javafx.geometry.Pos;
 import javafx.scene.Scene;
 import javafx.scene.SnapshotParameters;
 import javafx.scene.control.Label;
-import javafx.scene.image.Image;
-import javafx.scene.image.ImageView;
 import javafx.scene.image.WritableImage;
 import javafx.scene.layout.HBox;
 import javafx.scene.layout.Priority;
-import javafx.scene.layout.Region;
-import javafx.scene.layout.StackPane;
 import javafx.scene.layout.VBox;
 import javafx.scene.paint.Color;
 import javafx.stage.Stage;
@@ -21,25 +18,58 @@ import javafx.stage.Stage;
 import javax.imageio.ImageIO;
 import java.awt.image.BufferedImage;
 import java.io.File;
+import java.lang.reflect.Method;
+import java.util.List;
 import java.util.Objects;
 
 /**
- * Renders the teaching card for an illustrated pose and a written-only pose
- * side by side, so the coaching visual can be reviewed without running a
+ * Renders the coaching teaching card so it can be reviewed without running a
  * whole practice session.
+ *
+ * The card is built by the application class and driven here reflectively,
+ * rather than rebuilt from a copy. A copy is worse than no snapshot at all: it
+ * reviewed a card with fewer labels and ninety more pixels of height than the
+ * one practice actually draws, and so reported a clean layout while the real
+ * card was spilling its illustration past its own background.
+ *
+ * The box below each card stands in for the observation panel that follows it
+ * on the coaching page, so anything overflowing lands somewhere visible
+ * instead of off the bottom of the image.
  */
 public final class TeachingCardSnapshot extends Application {
+    /** The height coaching gives this card; see showCoach(). */
+    private static final double CARD_WIDTH = 560, CARD_PREF_HEIGHT = 215, CARD_MIN_HEIGHT = 200, CARD_MAX_HEIGHT = 230, CARD_SPACING = 8;
+
     @Override public void start(Stage stage) throws Exception {
-        var catalog = new TeachingAssetCatalog();
-        var row = new HBox(20, card(catalog, "chair", "Chair",
-                        "Sit the hips back, bend the knees, and keep the chest lifted."),
-                card(catalog, "warrior_two", "Warrior II",
-                        "Stack the front knee over the ankle and extend through both arms."),
-                card(catalog, "downward_dog", "Downward Dog",
-                        "Press the floor away and lift your hips up and back."));
+        var appClass = Class.forName("io.saha.yoga.SahaApp");
+        var app = appClass.getDeclaredConstructor().newInstance();
+        Method update = appClass.getDeclaredMethod("updateTeachingView", RoutineItem.class);
+        update.setAccessible(true);
+        var teachingField = appClass.getDeclaredField("teachingView");
+        teachingField.setAccessible(true);
+        var catalog = new PoseCatalog();
+
+        var row = new HBox(20);
         row.setPadding(new Insets(24));
         row.setStyle("-fx-background-color: #102523;");
-        var scene = new Scene(row, 1840, 340, Color.web("#102523"));
+        for (var poseId : List.of("chair", "warrior_two", "downward_dog")) {
+            var card = new VBox(CARD_SPACING);
+            card.getStyleClass().add("teaching-view");
+            card.setPrefSize(CARD_WIDTH, CARD_PREF_HEIGHT);
+            card.setMinHeight(CARD_MIN_HEIGHT); card.setMaxHeight(CARD_MAX_HEIGHT);
+            teachingField.set(app, card);
+            update.invoke(app, new RoutineItem(catalog.require(poseId), 50, "STANDING", "review snapshot"));
+
+            var below = new Label("OBSERVATION PANEL BELOW THE CARD");
+            below.getStyleClass().add("observation-title");
+            var panel = new VBox(5, below);
+            panel.getStyleClass().add("camera-observation");
+            panel.setPrefSize(CARD_WIDTH, 110); panel.setMinHeight(110);
+            var column = new VBox(12, card, panel);
+            VBox.setVgrow(card, Priority.NEVER);
+            row.getChildren().add(column);
+        }
+        var scene = new Scene(row, 1840, 420, Color.web("#102523"));
         scene.getStylesheets().add(Objects.requireNonNull(getClass().getResource("/io/saha/yoga/saha.css")).toExternalForm());
         row.applyCss(); row.layout();
         var snapshot = row.snapshot(new SnapshotParameters(), null);
@@ -48,47 +78,6 @@ public final class TeachingCardSnapshot extends Application {
         ImageIO.write(toBufferedImage(snapshot), "png", destination);
         System.out.println(destination.getAbsolutePath());
         Platform.exit();
-    }
-
-    private VBox card(TeachingAssetCatalog catalog, String poseId, String displayName, String instruction) {
-        var icon = new PoseIconCatalog().forPose(poseId);
-        var asset = icon.isPresent() ? java.util.Optional.<TeachingAsset>empty() : catalog.enabledForCoaching(poseId);
-        var heading = new Label("TEACHING GUIDE"); heading.getStyleClass().add("badge");
-        var title = new Label(displayName); title.getStyleClass().add("teaching-pose-name");
-        var text = new Label(instruction); text.setWrapText(true); text.setMinHeight(Region.USE_PREF_SIZE); text.getStyleClass().add("teaching-instruction");
-        boolean illustrated = icon.isPresent() || asset.isPresent();
-        var boundary = new Label(illustrated
-                ? "License-verified reference illustration"
-                : "Illustration under review. Follow the written setup or skip this pose.");
-        boundary.setWrapText(true); boundary.setMinHeight(Region.USE_PREF_SIZE);
-        boundary.getStyleClass().add(illustrated ? "visual-approved" : "visual-review-warning");
-        var column = new VBox(10, title, text, boundary);
-        HBox.setHgrow(column, Priority.ALWAYS);
-        var body = new HBox(14, column);
-        icon.ifPresent(value -> {
-            var view = new PoseIconView();
-            view.show(value);
-            view.setMinSize(180, 180); view.setPrefSize(200, 200);
-            var credit = new Label(PoseIconCatalog.CREDIT); credit.getStyleClass().add("support-label");
-            var iconColumn = new VBox(4, view, credit); iconColumn.setAlignment(Pos.CENTER);
-            body.getChildren().add(iconColumn);
-        });
-        asset.ifPresent(value -> {
-            var stream = Objects.requireNonNull(getClass().getResourceAsStream(value.resourcePath()));
-            var art = new ImageView(new Image(stream));
-            art.setPreserveRatio(true); art.setFitWidth(220); art.setFitHeight(185);
-            var artPane = new StackPane(art); artPane.getStyleClass().add("licensed-art-canvas");
-            var credit = new Label("CC0 · " + value.creator()); credit.getStyleClass().add("support-label");
-            var artColumn = new VBox(4, artPane, credit); artColumn.setAlignment(Pos.CENTER);
-            body.getChildren().add(artColumn);
-        });
-        VBox.setVgrow(body, Priority.ALWAYS);
-        // The illustration draws the floor it actually rests on; a second rule
-        // across the whole card sat at a different height and contradicted it.
-        var view = new VBox(10, heading, body);
-        view.getStyleClass().add("teaching-view");
-        view.setPrefSize(560, 280);
-        return view;
     }
 
     private BufferedImage toBufferedImage(WritableImage image) {

@@ -45,6 +45,8 @@
 .teaching-view { -fx-background-color: #f5efe1; -fx-background-radius: 16; -fx-padding: 18 22; -fx-border-color: #d6c79e; -fx-border-radius: 16; -fx-border-width: 2; }
 .teaching-view .badge { -fx-text-fill: #725b25; }
 .teaching-pose-name { -fx-font-size: 27px; -fx-font-weight: 700; -fx-text-fill: #173532; }
+/* the coaching card names a pose the feedback panel has already announced */
+.teaching-pose-name.compact { -fx-font-size: 21px; }
 .teaching-instruction { -fx-font-size: 18px; -fx-text-fill: #173532; }
 .teaching-review { -fx-font-size: 13px; -fx-text-fill: #53625e; }
 .visual-review-warning { -fx-background-color: #fff2ca; -fx-background-radius: 8; -fx-padding: 10; -fx-text-fill: #493a16; -fx-font-weight: 700; }
