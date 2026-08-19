@@ -79,6 +79,33 @@ class LandmarkSmootherTest {
         assertTrue(knee(out) < DRAWN_AT, "a landmark gone for good must fade: " + knee(out));
     }
 
+    @Test void aJointTheModelIsUnsureOfDoesNotChaseItsOwnNoise() {
+        // a knee that goes behind the other leg: the score collapses and the
+        // reported position thrashes across the frame. Following that at full
+        // weight is what made the hidden leg crawl around the screen.
+        for (int i = 0; i < 30; i++) smoother.smooth(frame(.5, .6, .9));
+        double lowest = 1, highest = 0;
+        for (int i = 0; i < 20; i++) {
+            double x = smoother.smooth(frame(i % 2 == 0 ? .1 : .9, .6, .10))
+                    .landmarks().get(LandmarkName.LEFT_KNEE).x();
+            lowest = Math.min(lowest, x);
+            highest = Math.max(highest, x);
+        }
+        // undamped this settles into a swing of about .30; damped in proportion
+        // to a .10 score it is about .07
+        assertTrue(highest - lowest < .15,
+                "a thrashing guess should barely move the figure, swing was " + (highest - lowest));
+    }
+
+    @Test void aJointInPlainViewStillKeepsUp() {
+        // the damping must not slow down a joint the model can actually see,
+        // or the whole figure lags behind a body that is moving
+        for (int i = 0; i < 20; i++) smoother.smooth(frame(.5, .6, .9));
+        var moved = smoother.smooth(frame(.9, .6, .9));
+        assertTrue(moved.landmarks().get(LandmarkName.LEFT_KNEE).x() > .7,
+                "a confident joint should still move most of the way in one frame");
+    }
+
     @Test void positionJitterIsDampened() {
         for (int i = 0; i < 20; i++) smoother.smooth(frame(.5, .6, .9));
         var jumped = smoother.smooth(frame(.9, .6, .9));

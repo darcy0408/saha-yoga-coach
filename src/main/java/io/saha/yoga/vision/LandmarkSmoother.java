@@ -27,6 +27,22 @@ import java.util.EnumMap;
 public final class LandmarkSmoother {
     /** Position follows quickly; the body moves and the figure should keep up. */
     private static final double POSITION_WEIGHT = .55;
+    /**
+     * The confidence at which a position is followed at full speed.
+     *
+     * Mirrors the analyzer's reliability gate, kept as a local number rather
+     * than a dependency from vision on analysis. A joint the model is at least
+     * this sure of is an observation and the figure should keep up with it.
+     *
+     * <p>Below it, position is followed proportionally more slowly, because a
+     * low score does not mean the joint is roughly right - it means the
+     * coordinates are largely invented, and they thrash from frame to frame.
+     * Following that at full weight is what made a hidden knee crawl around the
+     * screen. Damping it in proportion to how little the model knows leaves the
+     * joint parked near the last place it was actually seen, which for a body
+     * holding still is where it still is.
+     */
+    private static final double TRUSTED_CONFIDENCE = .35;
     /** Confidence follows slowly, which is what stops the flicker. */
     private static final double CONFIDENCE_WEIGHT = .25;
     /** How fast a landmark the model stopped reporting fades away. */
@@ -48,9 +64,12 @@ public final class LandmarkSmoother {
                 smoothed.put(name, fresh);
                 continue;
             }
+            // how much of this reading to believe: full weight for a joint in
+            // plain view, proportionally less for one the model is guessing at
+            double positionWeight = POSITION_WEIGHT * Math.min(1, fresh.confidence() / TRUSTED_CONFIDENCE);
             smoothed.put(name, new Landmark(
-                    blend(fresh.x(), previous.x(), POSITION_WEIGHT),
-                    blend(fresh.y(), previous.y(), POSITION_WEIGHT),
+                    blend(fresh.x(), previous.x(), positionWeight),
+                    blend(fresh.y(), previous.y(), positionWeight),
                     blend(fresh.confidence(), previous.confidence(), CONFIDENCE_WEIGHT)));
         }
         return new LandmarkFrame(incoming.capturedAt() == null ? Instant.now() : incoming.capturedAt(), smoothed);
