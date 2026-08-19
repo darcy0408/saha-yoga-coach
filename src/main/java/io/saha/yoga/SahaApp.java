@@ -668,6 +668,40 @@ public final class SahaApp extends Application {
             new LandmarkName[]{LandmarkName.RIGHT_KNEE,LandmarkName.RIGHT_ANKLE});
     /** Below this, a keypoint is a guess rather than an observation, so it is not drawn. */
     private static final double DRAW_THRESHOLD = .30;
+    /**
+     * Below this a joint is not drawn at all.
+     *
+     * The model reports all seventeen keypoints on every frame whether or not
+     * it can see them, so there is always a number. This is the point below
+     * which that number carries no information worth showing.
+     */
+    private static final double GHOST_FLOOR = .08;
+
+    /**
+     * How solidly to draw a joint, from its confidence.
+     *
+     * Sitting cross-legged folds both knees and both ankles behind each other
+     * and the model scores them under the drawing threshold however well you
+     * are sitting, so dropping the limb outright left the practice opening on a
+     * figure with no legs. Drawing it faintly says "roughly here, not certain",
+     * which is true, and leaves a whole body on screen.
+     *
+     * <p>The fade is continuous rather than a step at the threshold. A step
+     * makes any joint hovering near the line flip between solid and faint
+     * several times a second, which is its own kind of broken; ramping down to
+     * nothing at the floor means a limb fades out instead of blinking out.
+     *
+     * <p>Nothing downstream reads this. The measurement gate is separate and
+     * unchanged, so a guessed leg still cannot earn a correction or a chime.
+     */
+    private static double visibility(double confidence) {
+        if (confidence >= DRAW_THRESHOLD) return 1;
+        if (confidence <= GHOST_FLOOR) return 0;
+        return (confidence - GHOST_FLOOR) / (DRAW_THRESHOLD - GHOST_FLOOR);
+    }
+
+    /** A limb is only as certain as its least certain end. */
+    private static double visibility(double a, double b) { return visibility(Math.min(a, b)); }
 
     // A friendlier figure: warm lit joints, rounded limbs, and a face that
     // looks back at you. Someone holding a pose for fifty seconds is looking at
@@ -727,20 +761,25 @@ public final class SahaApp extends Application {
         for (var link : LINKS) {
             var a = points.get(link[0]);
             var b = points.get(link[1]);
-            if (a == null || b == null || a.confidence() < DRAW_THRESHOLD || b.confidence() < DRAW_THRESHOLD) continue;
+            if (a == null || b == null) continue;
+            double solidity = visibility(a.confidence(), b.confidence());
+            if (solidity == 0) continue;
             var bone = new Line(screenX(a.x(), originX, shown), originY + a.y() * shown,
                     screenX(b.x(), originX, shown), originY + b.y() * shown);
             bone.setStroke(LIMB);
             bone.setStrokeWidth(4);
             bone.setStrokeLineCap(javafx.scene.shape.StrokeLineCap.ROUND);
             bone.setEffect(glow(LIMB.deriveColor(0, 1, 1, .5), 7));
+            bone.setOpacity(solidity);
             landmarkOverlay.getChildren().add(bone);
         }
         points.forEach((name, mark) -> {
-            if (mark.confidence() < DRAW_THRESHOLD) return;
+            double solidity = visibility(mark.confidence());
+            if (solidity == 0) return;
             double radius = switch (name) { case LEFT_HAND, RIGHT_HAND, LEFT_TOE, RIGHT_TOE -> 3; default -> 5; };
             var dot = new Circle(screenX(mark.x(), originX, shown), originY + mark.y() * shown, radius, JOINT);
             dot.setEffect(glow(JOINT, radius * 2.4));
+            dot.setOpacity(solidity);
             landmarkOverlay.getChildren().add(dot);
         });
     }
@@ -842,11 +881,13 @@ public final class SahaApp extends Application {
         for (var link : links) {
             var a = frame.landmarks().get(link[0]); var b = frame.landmarks().get(link[1]);
             if (a == null || b == null) continue;
-            if (live && (a.confidence() < DRAW_THRESHOLD || b.confidence() < DRAW_THRESHOLD)) continue;
+            double solidity = live ? visibility(a.confidence(), b.confidence()) : 1;
+            if (solidity == 0) continue;
             var line = new Line(mapX.applyAsDouble(a.x()), offsetY+a.y()*scale, mapX.applyAsDouble(b.x()), offsetY+b.y()*scale);
             line.setStroke(LIMB); line.setStrokeWidth(limbWidth);
             line.setStrokeLineCap(javafx.scene.shape.StrokeLineCap.ROUND);
             line.setEffect(glow(LIMB.deriveColor(0, 1, 1, .55), limbWidth * 1.6));
+            line.setOpacity(solidity);
             bodyView.getChildren().add(line);
         }
         var leftHip=frame.landmarks().get(LandmarkName.LEFT_HIP);var rightHip=frame.landmarks().get(LandmarkName.RIGHT_HIP);
@@ -867,19 +908,23 @@ public final class SahaApp extends Application {
         bodyView.getChildren().add(spine);
         frame.landmarks().entrySet().stream()
                 .filter(entry -> entry.getKey() != LandmarkName.NOSE)
-                .filter(entry -> !live || entry.getValue().confidence() >= DRAW_THRESHOLD)
+                .filter(entry -> !live || visibility(entry.getValue().confidence()) > 0)
                 .forEach(entry -> {
             double radius = switch (entry.getKey()) { case LEFT_HAND,RIGHT_HAND,LEFT_TOE,RIGHT_TOE -> limbWidth * .62; default -> limbWidth * .92; };
             var p = entry.getValue();
             var dot = new Circle(mapX.applyAsDouble(p.x()), offsetY+p.y()*scale, radius, JOINT);
             dot.setEffect(glow(JOINT, radius * 2.6));
+            if (live) dot.setOpacity(visibility(p.confidence()));
             bodyView.getChildren().add(dot);
         });
         var nose = frame.landmarks().get(LandmarkName.NOSE);
         var leftShoulder = frame.landmarks().get(LandmarkName.LEFT_SHOULDER);
         var rightShoulder = frame.landmarks().get(LandmarkName.RIGHT_SHOULDER);
-        if (nose == null || leftShoulder == null || rightShoulder == null
-                || (live && nose.confidence() < DRAW_THRESHOLD)) return;
+        if (nose == null || leftShoulder == null || rightShoulder == null) return;
+        // a head fades on the same terms as a limb: a face turned away scores
+        // low, and a figure that loses its head is no better than a legless one
+        double headSolidity = live ? visibility(nose.confidence()) : 1;
+        if (headSolidity == 0) return;
         double headRadius = Math.max(20, scale*.052);
         double headCenterX = mapX.applyAsDouble(nose.x());
         double headCenterY = offsetY + nose.y()*scale;
@@ -895,8 +940,12 @@ public final class SahaApp extends Application {
         var neck = new Line(headCenterX+dx*boundaryScale,headCenterY+dy*boundaryScale,shoulderX,shoulderY);
         neck.setStroke(LIMB); neck.setStrokeWidth(limbWidth);
         neck.setStrokeLineCap(javafx.scene.shape.StrokeLineCap.ROUND);
+        neck.setOpacity(headSolidity); head.setOpacity(headSolidity);
         bodyView.getChildren().addAll(neck, head);
+        int faceFrom = bodyView.getChildren().size();
         drawFace(headCenterX, headCenterY, headRadius, landmarks.faceDirection());
+        if (headSolidity < 1) bodyView.getChildren().subList(faceFrom, bodyView.getChildren().size())
+                .forEach(node -> node.setOpacity(headSolidity));
         var label = new Text(18, 28, live ? "Your body · nothing else from the room is drawn" : landmarks.description());
         label.setFill(Color.web("#b7c8c5"));
         bodyView.getChildren().add(label);

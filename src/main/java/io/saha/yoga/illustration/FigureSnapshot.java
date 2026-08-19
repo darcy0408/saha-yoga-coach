@@ -42,13 +42,13 @@ public final class FigureSnapshot extends Application {
         sourceField.setAccessible(true);
 
         var gallery = new TilePane();
-        gallery.setHgap(14); gallery.setVgap(14); gallery.setPrefColumns(8);
+        gallery.setHgap(14); gallery.setVgap(14); gallery.setPrefColumns(9);
         gallery.setPadding(new Insets(22));
         gallery.setStyle("-fx-background-color: #091817;");
         // the poses whose shape has been wrong at some point: lunge depth,
         // squat depth, which way a body faces and whether its hands and feet
         // reach the floor are all things numbers hide and a picture does not
-        for (var pose : List.of("seated_side_reach", "cat_cow", "warrior_one", "warrior_two", "goddess", "seated_fold", "tree", "downward_dog")) {
+        for (var pose : List.of("easy_seat", "seated_side_reach", "cat_cow", "warrior_one", "warrior_two", "goddess", "seated_fold", "tree", "downward_dog")) {
             var source = new DemoLandmarkSource();
             source.selectPose(pose);
             sourceField.set(app, source);
@@ -58,13 +58,13 @@ public final class FigureSnapshot extends Application {
             bodyField.set(app, pane);
             // a body that is close but not right, so the guide underneath has
             // something to differ from - which is the whole point of drawing it
-            draw.invoke(app, offBy(source.targetFrame()), true);
+            draw.invoke(app, offBy(source.targetFrame(), LEGS_HIDDEN.contains(pose)), true);
             var label = new Label(pose.replace('_', ' ') + " · you vs target"); label.getStyleClass().add("observation-title");
             var card = new VBox(6, pane, label);
             card.setStyle("-fx-background-color: #091817;");
             gallery.getChildren().add(card);
         }
-        var scene = new Scene(gallery, 2580, 380, Color.web("#091817"));
+        var scene = new Scene(gallery, 2900, 380, Color.web("#091817"));
         scene.getStylesheets().add(Objects.requireNonNull(getClass().getResource("/io/saha/yoga/saha.css")).toExternalForm());
         gallery.applyCss(); gallery.layout();
         var snapshot = gallery.snapshot(new SnapshotParameters(), null);
@@ -75,8 +75,19 @@ public final class FigureSnapshot extends Application {
         Platform.exit();
     }
 
+    /**
+     * Poses where a real camera cannot see the legs.
+     *
+     * Sitting on the floor folds both knees and both ankles behind each other,
+     * and the model scores them far below the drawing threshold however well
+     * the pose is held. Rendering these at full confidence made the gallery
+     * report a body the live figure never actually draws.
+     */
+    private static final java.util.Set<String> LEGS_HIDDEN =
+            java.util.Set.of("easy_seat", "seated_side_reach", "seated_fold");
+
     /** Nudges the limbs off target and gives every point camera-like confidence. */
-    private io.saha.yoga.domain.LandmarkFrame offBy(io.saha.yoga.domain.LandmarkFrame frame) {
+    private io.saha.yoga.domain.LandmarkFrame offBy(io.saha.yoga.domain.LandmarkFrame frame, boolean legsHidden) {
         var moved = new java.util.EnumMap<io.saha.yoga.domain.LandmarkName, io.saha.yoga.domain.Landmark>(io.saha.yoga.domain.LandmarkName.class);
         // the torso stays put so the guide fits to the same hips, and only the
         // limbs differ - which is what a real correction looks like
@@ -89,8 +100,12 @@ public final class FigureSnapshot extends Application {
                 case LEFT_ELBOW, RIGHT_ELBOW -> { dx = -.03; dy = .05; }
                 default -> { }
             }
+            double confidence = legsHidden && switch (name) {
+                case LEFT_KNEE, RIGHT_KNEE, LEFT_ANKLE, RIGHT_ANKLE, LEFT_TOE, RIGHT_TOE -> true;
+                default -> false;
+            } ? .15 : .9;
             moved.put(name, new io.saha.yoga.domain.Landmark(
-                    Math.min(1, Math.max(0, point.x() + dx)), Math.min(1, Math.max(0, point.y() + dy)), .9));
+                    Math.min(1, Math.max(0, point.x() + dx)), Math.min(1, Math.max(0, point.y() + dy)), confidence));
         });
         return new io.saha.yoga.domain.LandmarkFrame(java.time.Instant.now(), moved);
     }
