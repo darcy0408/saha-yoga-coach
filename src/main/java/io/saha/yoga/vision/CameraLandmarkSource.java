@@ -47,7 +47,6 @@ public final class CameraLandmarkSource implements LandmarkSource {
     private final AtomicReference<LandmarkFrame> latest = new AtomicReference<>();
     private final AtomicReference<CameraFrame> latestImage = new AtomicReference<>();
     private volatile String description = "Camera landmarks · starting";
-    private volatile boolean failed;
 
     /**
      * Builds a camera source for {@code deviceIndex}, or explains why it could not.
@@ -90,7 +89,6 @@ public final class CameraLandmarkSource implements LandmarkSource {
             } catch (Exception e) {
                 // One bad frame should not end the session; the confidence gate
                 // handles the resulting gap, and the timer pauses on its own.
-                failed = true;
                 description = "Camera landmarks · last frame could not be read";
             }
         }, status, failures);
@@ -114,7 +112,7 @@ public final class CameraLandmarkSource implements LandmarkSource {
 
     @Override public boolean isTransitioning() { return false; }
 
-    @Override public String description() { return failed ? description : description; }
+    @Override public String description() { return description; }
 
     @Override public void close() {
         capture.close();
