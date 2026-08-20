@@ -1,6 +1,6 @@
 # Saha delivery plan
 
-Last updated: 2026-08-17
+Last updated: 2026-08-20
 
 ## Completed
 
@@ -13,6 +13,31 @@ Last updated: 2026-08-17
 - Camera capture opens with DirectShow and never requests Media Foundation by name.
 - Spoken guidance: pose announcement, two practical entry steps per pose, corrections,
   arrival confirmation, and an end-of-practice close.
+
+## This session (2026-08-20)
+
+An adversarial audit of the vision pipeline, prompted by a suspicion that the two
+open symptoms had a common cause. They largely do, and it is upstream of both:
+
+- The camera opens at 640×480 and `PoseEstimator` letterboxes the *whole* frame
+  into MoveNet's 192×192 input, so a standing body spans about 144 pixels and a
+  raised wrist two or three. MoveNet's reference pipeline crops to the person
+  found in the previous frame; that step was never implemented here. "The model
+  stops tracking wrists overhead" was therefore an untested hypothesis stated as
+  fact, and the README now says so.
+- `LandmarkSmoother` slows a joint's position update in proportion to its
+  confidence, so a wrist whose score falls as it rises visibly parks mid-lift,
+  then the drawing fade dissolves it. Correct for a held pose; it made the
+  symptom look total when the underlying score drop was partial.
+- Seated legs are the same starvation, deeper: a seated body is smaller in frame
+  again, on top of the model's genuine weakness on non-upright bodies.
+
+Removed a `failed` flag in `CameraLandmarkSource` whose only reader returned the
+same value on both branches.
+
+The sibling project `lets-dance` was scaffolded from this audit; its PLAN.md
+carries the findings as design constraints, and the person-crop work is step one
+in both plans. If it lands there first, backport rather than reimplement.
 
 ## This session (2026-08-16/17)
 
@@ -58,7 +83,9 @@ fixed weight regardless of confidence, so faded joints still thrashed.
 
 ## Verification
 
-`./gradlew.bat clean test` on Temurin 26.0.1, 2026-08-17: **95 tests, 0 failures**.
+`./gradlew.bat clean test` on Temurin 26.0.1, 2026-08-20: **102 tests, 0 failures**
+(counted from `build/test-results/test/TEST-*.xml`, 22 classes, with the model
+present so the estimator fixtures run rather than skip).
 `git diff --check` clean. `gradlew cameraCheck`: camera 0 and 1 open on DirectShow at
 640x480; Media Foundation hangs inside `open()` on this hardware and is not used.
 
@@ -67,15 +94,20 @@ poses draw no legs, which is the open issue below.
 
 ## Next
 
-1. Legs are not drawn in seated poses. First establish whether they are inside the
-   camera frame at all - DirectShow may hand back a narrower field of view than the
-   backend used previously. If they are in frame, weight position smoothing by
-   confidence in `LandmarkSmoother` so an uncertain joint parks near its last good
-   position instead of following noise; only then is drawing it faintly worth trying.
-2. Validate each measured pose against people actually holding it, across varied
+1. Feed the model a crop centred on the person instead of the whole letterboxed
+   frame, and capture above 640×480. The 2026-08-20 audit traced both open
+   symptoms — wrists lost overhead, legs unseen while seated — largely to the
+   body spanning only ~144 of the input's 192 pixels. Crop around the previous
+   frame's keypoints with a generous margin, fall back to the full frame when
+   tracking is lost, and re-test both symptoms before touching any angle range.
+   MoveNet Thunder (256 px) is the follow-up if the crop alone is not enough.
+2. Legs are not drawn in seated poses. Beyond the crop above, establish whether
+   they are inside the camera frame at all - DirectShow may hand back a narrower
+   field of view than the backend used previously.
+3. Validate each measured pose against people actually holding it, across varied
    bodies, rooms and lighting.
-3. Record the demonstration video.
-4. Floor poses earning measurement rather than being handed it.
+4. Record the demonstration video.
+5. Floor poses earning measurement rather than being handed it.
 
 ## Blockers
 
