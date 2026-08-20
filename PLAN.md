@@ -78,8 +78,25 @@ Tooling:
 - `gradlew chimeCheck` plays the chime and reports whether audio is available.
 - `gradlew coverSnapshot` renders the project cover from the application itself.
 
-Reverted: drawing low-confidence joints at reduced opacity. Position is smoothed at a
-fixed weight regardless of confidence, so faded joints still thrashed.
+A joint the camera half-sees is now drawn faintly rather than dropped, so a body
+sitting cross-legged keeps its legs. This took two changes, and an earlier attempt at
+only the second was reverted for looking worse than the missing limb:
+
+- `LandmarkSmoother` follows a position in proportion to confidence rather than at a
+  fixed weight. A low score does not mean the coordinates are roughly right; it means
+  they are largely invented and thrash frame to frame, so following them at full speed
+  made the hidden leg crawl around the screen. A joint in plain view keeps up exactly
+  as before; one the model has little opinion about parks near where it was last really
+  seen.
+- `SahaApp.visibility()` fades a joint continuously between the drawing threshold and a
+  floor of 0.08, below which nothing is drawn. The reverted attempt used a hard step at
+  the threshold, which made any joint hovering near the line flip between solid and
+  faint several times a second.
+
+The measurement gate is untouched: a faint leg still cannot earn a correction or a
+chime, and the two places that use confidence for geometry rather than for drawing -
+fitting the guide figure to the hips, and bowing the spine from the head - keep the
+strict threshold.
 
 ## Verification
 
@@ -90,7 +107,11 @@ present so the estimator fixtures run rather than skip).
 640x480; Media Foundation hangs inside `open()` on this hardware and is not used.
 
 Manual, on one person in one room: standing poses track and coach correctly. Seated
-poses draw no legs, which is the open issue below.
+poses drew no legs; the fade above is verified only in `gradlew figureSnapshot`, which
+now renders Easy Seat, Seated Side Reach and Seated Fold at the confidence a real
+camera reports. **Whether the faint legs sit still or crawl on a live camera has not
+been checked by anyone.** A still image cannot show jitter, and jitter is exactly what
+sank the previous attempt.
 
 ## Next
 
@@ -101,9 +122,10 @@ poses draw no legs, which is the open issue below.
    frame's keypoints with a generous margin, fall back to the full frame when
    tracking is lost, and re-test both symptoms before touching any angle range.
    MoveNet Thunder (256 px) is the follow-up if the crop alone is not enough.
-2. Legs are not drawn in seated poses. Beyond the crop above, establish whether
-   they are inside the camera frame at all - DirectShow may hand back a narrower
-   field of view than the backend used previously.
+2. Watch the faint seated legs on a live camera. If they sit still, this is done and
+   the crop above will firm them up further; if they crawl, the damping is too weak,
+   and the next lever is to draw a low-confidence limb only once its position has
+   actually settled - a variance gate - rather than reverting the fade again.
 3. Validate each measured pose against people actually holding it, across varied
    bodies, rooms and lighting.
 4. Record the demonstration video.
