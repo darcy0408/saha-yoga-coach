@@ -127,10 +127,12 @@ interface.
   result above, consumed with an exhaustive `switch`.
 - **Records** — landmarks, frames, poses, alignment rules, session metrics and
   icons are immutable records across 15 files.
-- **Virtual threads** — camera capture and inference run on one
-  (`OpenCvCameraCapture`), and the speech helper's reader and writer on two more
-  (`SystemVoice`). The JavaFX side coalesces frames so capture can never flood
-  the event queue.
+- **Virtual threads, where they belong** — the speech helper's reader and
+  writer run on virtual threads (`SystemVoice`). Camera capture and inference
+  deliberately do not: that loop is blocking native calls, which would pin a
+  virtual thread's carrier for the whole practice, so it gets a platform thread
+  (`OpenCvCameraCapture`). The JavaFX side coalesces frames so capture can
+  never flood the event queue.
 - **Sequenced collections** — `getFirst()` / `getLast()` throughout the routine
   and cue handling, where "the first instruction" and "the last phase" are the
   actual domain concepts.
@@ -141,7 +143,7 @@ interface.
   overlay, and progress.
 
 Supporting cast: ONNX Runtime (inference), OpenPnP OpenCV (capture), Jackson
-(derived-metric JSON), JUnit 5 — **62 tests**, covering geometry, confidence
+(derived-metric JSON), JUnit 5 — **123 tests**, covering geometry, confidence
 gating, cue limits, instruction-only truthfulness, bilateral rules, routine
 ordering and duration, personalization, persistence, asset licence checksums,
 pose-icon coverage, spoken-cue pacing, and the real model driven through the
@@ -251,8 +253,8 @@ No purchases, accounts, API keys, or cloud services are required.
 - `build.gradle.kts` pins the Gradle Java toolchain to **Java 26**
   (`JavaLanguageVersion.of(26)`) and applies `--enable-preview` to compile,
   test, and run tasks.
-- Verified on **Temurin 26.0.1** with **Gradle 9.4**; `gradlew.bat clean test`
-  passes **62 tests**.
+- Verified on **Temurin 26.0.1** with **Gradle 9.4**; `gradlew.bat clean test --no-build-cache --rerun-tasks`
+  passes **123 tests**.
 - Java 26 preview `LazyConstant` is exercised directly in
   `src/test/java/io/saha/yoga/routine/Java26LazyConstantTest.java`.
 
