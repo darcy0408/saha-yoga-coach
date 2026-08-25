@@ -123,10 +123,8 @@ public final class OpenCvCameraCapture implements CameraCapture {
             var candidate = openWithinDeadline(backend, status);
             if (candidate == null) continue;
             try {
-                candidate.set(Videoio.CAP_PROP_FRAME_WIDTH, 640);
-                candidate.set(Videoio.CAP_PROP_FRAME_HEIGHT, 480);
                 candidate.set(Videoio.CAP_PROP_BUFFERSIZE, 1);
-                if (waitForFirstFrame(candidate, bgr)) {
+                if (negotiateSize(candidate, bgr, status)) {
                     camera = candidate;
                     return true;
                 }
@@ -179,6 +177,54 @@ public final class OpenCvCameraCapture implements CameraCapture {
         var candidate = opened.get();
         if (candidate == null) status.accept(backend.name() + " did not open camera " + deviceIndex + ".");
         return candidate;
+    }
+
+    /**
+     * The size to ask a camera for, and why it is this shape.
+     *
+     * <p>The model is shown a square cropped to the person, so the frame's own
+     * size decides how many real pixels that square is cut from. At 640x480 the
+     * crop already has enough to fill the model's 192-pixel input for a body
+     * anywhere near the camera; the detail bought here is for a body far enough
+     * back that the crop would otherwise have to magnify it.
+     *
+     * <p>4:3 rather than the 16:9 most webcams would rather give. Widescreen
+     * trades away vertical view, and vertical is the axis a standing body needs
+     * - this coach has already lost a session to a person who did not fit in
+     * the frame.
+     */
+    private static final int PREFERRED_WIDTH = 1280, PREFERRED_HEIGHT = 960;
+    /** The size that has always worked here, for a device that will not give the above. */
+    private static final int FALLBACK_WIDTH = 640, FALLBACK_HEIGHT = 480;
+
+    /**
+     * Takes the most detail this device will give without changing shape.
+     *
+     * <p>A camera asked for a size it does not have does not refuse: it sends
+     * the nearest mode it does have, which is usually widescreen. So the answer
+     * is checked against a real frame rather than trusted, and a device that
+     * answers with the wrong shape is asked again for the size known to work.
+     */
+    private boolean negotiateSize(VideoCapture candidate, Mat bgr, Consumer<String> status) {
+        candidate.set(Videoio.CAP_PROP_FRAME_WIDTH, PREFERRED_WIDTH);
+        candidate.set(Videoio.CAP_PROP_FRAME_HEIGHT, PREFERRED_HEIGHT);
+        if (!waitForFirstFrame(candidate, bgr)) return false;
+        if (isFourThree(bgr)) {
+            status.accept("Camera " + deviceIndex + " is sending " + bgr.cols() + "x" + bgr.rows() + " video.");
+            return true;
+        }
+        status.accept("Camera " + deviceIndex + " answered with " + bgr.cols() + "x" + bgr.rows()
+                + ", which is not 4:3 and would cut the top and bottom off a standing pose; asking for "
+                + FALLBACK_WIDTH + "x" + FALLBACK_HEIGHT + " instead.");
+        candidate.set(Videoio.CAP_PROP_FRAME_WIDTH, FALLBACK_WIDTH);
+        candidate.set(Videoio.CAP_PROP_FRAME_HEIGHT, FALLBACK_HEIGHT);
+        // If it will not give that either, whatever it is sending is still
+        // video, and a wide picture beats no practice.
+        return waitForFirstFrame(candidate, bgr) || !bgr.empty();
+    }
+
+    private static boolean isFourThree(Mat frame) {
+        return frame.rows() > 0 && Math.abs((double) frame.cols() / frame.rows() - 4.0 / 3) < .02;
     }
 
     private boolean waitForFirstFrame(VideoCapture candidate, Mat bgr) {

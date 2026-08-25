@@ -86,6 +86,15 @@ public final class SahaApp extends Application {
     private boolean paused;
     private Timeline clock;
     private Label poseLabel, phaseLabel, statusLabel, suggestionLabel, optionalLabel, confidenceLabel, timerLabel, measurementLabel;
+    /**
+     * Off by default and reachable only during a camera practice. This is the
+     * instrument for the live checks the crop and capture changes are waiting
+     * on: raw model scores per joint, the patch the model was shown, and the
+     * pace the pipeline sustains. It shows numbers the coach otherwise rounds
+     * into words, so it stays out of the way unless someone asks.
+     */
+    private boolean showDiagnostics;
+    private Label diagnosticsLabel;
     private Pane bodyView;
     private Pane landmarkOverlay;
     private VBox teachingView;
@@ -402,9 +411,23 @@ public final class SahaApp extends Application {
         controls.add(pause, 0, 0); controls.add(repeat, 1, 0);
         controls.add(easier, 0, 1); controls.add(next, 1, 1);
         controls.add(speech, 0, 2); controls.add(tint, 1, 2);
-        controls.add(stop, 0, 3, 2, 1);
+        diagnosticsLabel = wrapLabel();
+        diagnosticsLabel.setVisible(false); diagnosticsLabel.setManaged(false);
+        if (cameraSource != null) {
+            // Only a real camera has anything to diagnose: the demo source has
+            // no model, no crop and no capture rate worth a number.
+            var diagnose = actionButton("Diagnostics: off");
+            diagnose.setOnAction(e -> {
+                showDiagnostics = !showDiagnostics;
+                diagnose.setText(showDiagnostics ? "Diagnostics: on" : "Diagnostics: off");
+                diagnosticsLabel.setVisible(showDiagnostics); diagnosticsLabel.setManaged(showDiagnostics);
+                if (!showDiagnostics) diagnosticsLabel.setText("");
+            });
+            controls.add(diagnose, 0, 3, 2, 1);
+        }
+        controls.add(stop, 0, cameraSource != null ? 4 : 3, 2, 1);
         var reasonText = wrapLabel(); reasonText.setMinHeight(Region.USE_PREF_SIZE); reasonText.setText(String.join(" ", routine.explanations()));
-        var feedback = new VBox(10, phaseLabel, poseLabel, timerLabel, statusLabel, measurementLabel, suggestionLabel, optionalLabel, confidenceLabel, new Separator(), new Label("Why this routine changed"), reasonText, controls); feedback.getStyleClass().add("card"); feedback.setPrefWidth(400); feedback.setMaxWidth(430);
+        var feedback = new VBox(10, phaseLabel, poseLabel, timerLabel, statusLabel, measurementLabel, suggestionLabel, optionalLabel, confidenceLabel, diagnosticsLabel, new Separator(), new Label("Why this routine changed"), reasonText, controls); feedback.getStyleClass().add("card"); feedback.setPrefWidth(400); feedback.setMaxWidth(430);
         var observationTitle = new Label(cameraSource != null
                 ? "YOU, AS THE COACH SEES YOU · NO ROOM, NO FURNITURE"
                 : livePreviewActive
@@ -445,6 +468,7 @@ public final class SahaApp extends Application {
         speakSetup();
         if (cameraSource != null && !figureOnly) cameraSource.latestImage().ifPresent(image -> drawCameraOverlay(frame, image.width()));
         else drawFrame(frame, cameraSource != null);
+        if (showDiagnostics && cameraSource != null) cameraSource.diagnostics().ifPresent(d -> diagnosticsLabel.setText(describe(d)));
         if (landmarks.isTransitioning()) {
             statusLabel.setText("Status: Moving into " + current().pose().displayName());
             suggestionLabel.setText("Transition: " + landmarks.transitionGuidance());
@@ -531,6 +555,33 @@ public final class SahaApp extends Application {
         return voice.isAvailable() ? "Spoken guidance: on" : "Spoken guidance unavailable";
     }
     private String level(double value) { return value >= .85 ? "High" : value >= .70 ? "Medium" : "Low"; }
+
+    /**
+     * The diagnostics line: raw scores, the crop, and the pace.
+     *
+     * <p>Scores are the model's own, before smoothing, because the question
+     * this view answers is what the model sees - the drawn figure already
+     * shows what the smoother makes of it. Left|Right, in camera truth, not
+     * mirrored: the readout matches the data, and the mirrored preview is a
+     * courtesy for bodies, not for numbers.
+     */
+    private static String describe(VisionDiagnostics d) {
+        var raw = d.raw().landmarks();
+        return "Raw scores L|R — shoulder " + pair(raw, LandmarkName.LEFT_SHOULDER, LandmarkName.RIGHT_SHOULDER)
+                + " · hip " + pair(raw, LandmarkName.LEFT_HIP, LandmarkName.RIGHT_HIP)
+                + " · wrist " + pair(raw, LandmarkName.LEFT_WRIST, LandmarkName.RIGHT_WRIST)
+                + " · knee " + pair(raw, LandmarkName.LEFT_KNEE, LandmarkName.RIGHT_KNEE)
+                + " · ankle " + pair(raw, LandmarkName.LEFT_ANKLE, LandmarkName.RIGHT_ANKLE)
+                + "\n" + (d.wholeFrame() ? "Crop: whole frame"
+                        : "Crop: %.2f of frame width, from (%.2f, %.2f)".formatted(d.regionSize(), d.regionX(), d.regionY()))
+                + " · estimate %.0f ms · %.0f landmark frames/s".formatted(d.estimateMillis(), d.landmarksPerSecond());
+    }
+
+    private static String pair(java.util.Map<LandmarkName, Landmark> raw, LandmarkName left, LandmarkName right) {
+        return score(raw.get(left)) + "|" + score(raw.get(right));
+    }
+
+    private static String score(Landmark mark) { return mark == null ? "—" : "%.2f".formatted(mark.confidence()); }
     /** The measured number alongside the word, so a pause can be diagnosed rather than guessed at. */
     private String reading(double value) { return cameraSource == null ? "" : " (%.2f, needs %.2f)".formatted(value, PoseAnalyzer.RELIABILITY_THRESHOLD); }
     private String format(int seconds) { return "%d:%02d".formatted(seconds / 60, seconds % 60); }
@@ -782,6 +833,27 @@ public final class SahaApp extends Application {
             dot.setOpacity(solidity);
             landmarkOverlay.getChildren().add(dot);
         });
+        if (showDiagnostics && cameraSource != null) cameraSource.diagnostics().ifPresent(d -> {
+            // The box is the crop making itself visible: hunting, clipping a
+            // limb, or collapsing are all things a person can see at a glance
+            // and numbers hide. No box means the model is seeing the whole
+            // frame - the readout already says so in words.
+            if (d.wholeFrame()) return;
+            double x1 = screenX(d.regionX(), originX, shown), x2 = screenX(d.regionX() + d.regionSize(), originX, shown);
+            // A region may legitimately hang off the frame, but its box must
+            // not hang off the video onto the rest of the page.
+            double left = Math.max(Math.min(x1, x2), originX);
+            double right = Math.min(Math.max(x1, x2), originX + bounds.getWidth());
+            double top = Math.max(originY + d.regionY() * shown, originY);
+            double bottom = Math.min(originY + (d.regionY() + d.regionSize()) * shown, originY + bounds.getHeight());
+            if (right <= left || bottom <= top) return;
+            var box = new javafx.scene.shape.Rectangle(left, top, right - left, bottom - top);
+            box.setFill(null);
+            box.setStroke(Color.GOLD);
+            box.setStrokeWidth(2);
+            box.getStrokeDashArray().addAll(8.0, 6.0);
+            landmarkOverlay.getChildren().add(box);
+        });
     }
 
     /**
@@ -797,7 +869,7 @@ public final class SahaApp extends Application {
 
     /** The pixels to show, tinted or not. Reuses one buffer so this costs nothing per frame. */
     private byte[] forDisplay(CameraFrame frame) {
-        var source = frame.bgra();
+        var source = frame.bgraView();
         if (!stylizedColour) return source;
         if (tintScratch == null || tintScratch.length != source.length) tintScratch = new byte[source.length];
         for (int i = 0; i + 3 < source.length; i += 4) {

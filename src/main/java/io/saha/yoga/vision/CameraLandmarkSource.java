@@ -46,6 +46,11 @@ public final class CameraLandmarkSource implements LandmarkSource {
     private final LandmarkSmoother smoother = new LandmarkSmoother();
     private final AtomicReference<LandmarkFrame> latest = new AtomicReference<>();
     private final AtomicReference<CameraFrame> latestImage = new AtomicReference<>();
+    private final AtomicReference<VisionDiagnostics> diagnostics = new AtomicReference<>();
+    // Touched only on the capture thread; the smoothed rate crosses threads
+    // inside the immutable diagnostics record, never through these.
+    private long previousFrameNanos;
+    private double smoothedIntervalMillis;
     private volatile String description = "Camera landmarks · starting";
 
     /**
@@ -84,7 +89,11 @@ public final class CameraLandmarkSource implements LandmarkSource {
             latestImage.set(frame);
             images.accept(frame);
             try {
-                latest.set(smoother.smooth(estimator.estimate(frame)));
+                long before = System.nanoTime();
+                var raw = estimator.estimate(frame);
+                double estimateMillis = (System.nanoTime() - before) / 1_000_000.0;
+                latest.set(smoother.smooth(raw));
+                publishDiagnostics(raw, estimateMillis, before);
                 description = "Camera landmarks · on this device only";
             } catch (Exception e) {
                 // One bad frame should not end the session; the confidence gate
@@ -92,6 +101,31 @@ public final class CameraLandmarkSource implements LandmarkSource {
                 description = "Camera landmarks · last frame could not be read";
             }
         }, status, failures);
+    }
+
+    /**
+     * Numbers about the most recent frame, for the diagnostics view.
+     *
+     * <p>The raw estimate goes in before the smoother touches it: smoothed
+     * confidences are blended across frames, and reading them to judge the
+     * model would measure the smoother instead.
+     */
+    public Optional<VisionDiagnostics> diagnostics() { return Optional.ofNullable(diagnostics.get()); }
+
+    private void publishDiagnostics(LandmarkFrame raw, double estimateMillis, long frameNanos) {
+        // The rate is measured between estimates, not between camera frames,
+        // because inference runs on this same thread: this is the pace the
+        // whole pipeline actually sustains, which is the number in question
+        // when deciding whether the capture size costs frame rate.
+        if (previousFrameNanos != 0) {
+            double interval = (frameNanos - previousFrameNanos) / 1_000_000.0;
+            smoothedIntervalMillis = smoothedIntervalMillis == 0 ? interval
+                    : smoothedIntervalMillis + (interval - smoothedIntervalMillis) * .2;
+        }
+        previousFrameNanos = frameNanos;
+        var region = estimator.lastShownRegion();
+        double perSecond = smoothedIntervalMillis > 0 ? 1000.0 / smoothedIntervalMillis : 0;
+        diagnostics.set(new VisionDiagnostics(raw, region.x(), region.y(), region.size(), estimateMillis, perSecond));
     }
 
     /** The most recent camera image, for drawing the overlay in the same space. */

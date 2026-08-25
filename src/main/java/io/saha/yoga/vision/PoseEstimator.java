@@ -36,8 +36,11 @@ import java.util.Map;
  * nothing leaves the process, which for a camera pointed at someone's living
  * room is the whole point.
  *
- * <p>Not thread-safe: {@link OrtSession#run} is called from a single inference
- * thread.
+ * <p>The model sees a square patch cropped to the person rather than the whole
+ * frame; {@link PersonCrop} chooses it from the previous frame's answer, which
+ * makes this stateful. One estimator therefore follows one body through one
+ * practice, and is not thread-safe: {@link OrtSession#run} and the crop are
+ * both driven from a single inference thread.
  */
 public final class PoseEstimator implements AutoCloseable {
     /** MoveNet emits COCO keypoints in this order; only the ones Saha uses are named. */
@@ -56,6 +59,7 @@ public final class PoseEstimator implements AutoCloseable {
     private static final double EXTENSION = .055;
 
     private final OrtEnvironment environment = OrtEnvironment.getEnvironment();
+    private final PersonCrop crop = new PersonCrop();
     private final OrtSession session;
     private final String inputName;
     private final OnnxJavaType inputType;
@@ -93,10 +97,24 @@ public final class PoseEstimator implements AutoCloseable {
 
     public int inputSide() { return side; }
 
+    /**
+     * The patch of the frame the model was shown, in the landmarks' own space.
+     *
+     * <p>Same normalization as every landmark - both axes divided by the frame
+     * width - so a diagnostic overlay can draw this rectangle with the very
+     * transform it already uses for the skeleton, and the two cannot disagree.
+     */
+    public record ShownRegion(double x, double y, double size) { }
+
+    private volatile ShownRegion lastShown;
+
+    /** What the model saw on the most recent estimate, or null before the first one. */
+    public ShownRegion lastShownRegion() { return lastShown; }
+
     /** Estimates landmarks from a BGRA camera frame. */
     public LandmarkFrame estimate(CameraFrame frame) throws Exception {
         var bgra = new Mat(frame.height(), frame.width(), CvType.CV_8UC4);
-        bgra.put(0, 0, frame.bgra());
+        bgra.put(0, 0, frame.bgraView());
         var bgr = new Mat();
         Imgproc.cvtColor(bgra, bgr, Imgproc.COLOR_BGRA2BGR);
         bgra.release();
@@ -110,27 +128,15 @@ public final class PoseEstimator implements AutoCloseable {
     LandmarkFrame estimate(Mat bgrFrame) throws Exception {
         int sourceWidth = bgrFrame.width();
         int sourceHeight = bgrFrame.height();
+        // Nothing below the bottom of the frame was photographed, so nothing
+        // may be reported there. Both axes are normalized by the width, so the
+        // floor of the picture sits at height/width rather than at 1.
+        double lowest = (double) sourceHeight / sourceWidth;
 
-        // A plain resize to a square stretches a 4:3 frame, and a stretched body
-        // has wrong joint angles: a ninety-degree knee can read as a hundred.
-        // Scale uniformly, pad the remainder, then undo the transform on the way out.
-        double scale = Math.min((double) side / sourceWidth, (double) side / sourceHeight);
-        int scaledWidth = (int) Math.round(sourceWidth * scale);
-        int scaledHeight = (int) Math.round(sourceHeight * scale);
-        int padX = (side - scaledWidth) / 2;
-        int padY = (side - scaledHeight) / 2;
-
-        var rgb = new Mat();
-        Imgproc.cvtColor(bgrFrame, rgb, Imgproc.COLOR_BGR2RGB);
-        var scaled = new Mat();
-        Imgproc.resize(rgb, scaled, new Size(scaledWidth, scaledHeight));
-        var canvas = new Mat(side, side, rgb.type(), PAD);
-        scaled.copyTo(canvas.submat(padY, padY + scaledHeight, padX, padX + scaledWidth));
-        var pixels = new byte[(int) (canvas.total() * canvas.channels())];
-        canvas.get(0, 0, pixels);
-        rgb.release();
-        scaled.release();
-        canvas.release();
+        // Where the body was last seen, or the whole frame until one has been.
+        var region = crop.regionFor(sourceWidth, sourceHeight);
+        lastShown = new ShownRegion(region.x() / sourceWidth, region.y() / sourceWidth, region.size() / sourceWidth);
+        byte[] pixels = render(bgrFrame, region, side);
 
         try (OnnxTensor tensor = buildTensor(pixels, new long[]{1, side, side, 3});
              OrtSession.Result result = session.run(Map.of(inputName, tensor))) {
@@ -140,32 +146,80 @@ public final class PoseEstimator implements AutoCloseable {
                 float[] triple = output[0][0][index];
                 // MoveNet emits (y, x, score) - y first. Swapping these rotates
                 // the whole skeleton ninety degrees, the classic bug here.
-                double pixelX = (triple[1] * side - padX) / scale;
-                double pixelY = (triple[0] * side - padY) / scale;
+                // The model answers in fractions of the region it was shown, so
+                // undoing the crop is the region's own offset and span.
+                double pixelX = region.x() + triple[1] * region.size();
+                double pixelY = region.y() + triple[0] * region.size();
                 // Both axes are divided by the same number so the body keeps its
                 // true proportions; dividing y by the height instead would stretch
                 // the figure and quietly corrupt every joint angle.
-                points.put(name, new Landmark(clamp(pixelX / sourceWidth), clamp(pixelY / sourceWidth), triple[2]));
+                points.put(name, new Landmark(clamp(pixelX / sourceWidth, 1), clamp(pixelY / sourceWidth, lowest), triple[2]));
             });
-            extend(points, LandmarkName.LEFT_ELBOW, LandmarkName.LEFT_WRIST, LandmarkName.LEFT_HAND);
-            extend(points, LandmarkName.RIGHT_ELBOW, LandmarkName.RIGHT_WRIST, LandmarkName.RIGHT_HAND);
-            extend(points, LandmarkName.LEFT_KNEE, LandmarkName.LEFT_ANKLE, LandmarkName.LEFT_TOE);
-            extend(points, LandmarkName.RIGHT_KNEE, LandmarkName.RIGHT_ANKLE, LandmarkName.RIGHT_TOE);
+            extend(points, LandmarkName.LEFT_ELBOW, LandmarkName.LEFT_WRIST, LandmarkName.LEFT_HAND, lowest);
+            extend(points, LandmarkName.RIGHT_ELBOW, LandmarkName.RIGHT_WRIST, LandmarkName.RIGHT_HAND, lowest);
+            extend(points, LandmarkName.LEFT_KNEE, LandmarkName.LEFT_ANKLE, LandmarkName.LEFT_TOE, lowest);
+            extend(points, LandmarkName.RIGHT_KNEE, LandmarkName.RIGHT_ANKLE, LandmarkName.RIGHT_TOE, lowest);
+            crop.observe(points, sourceWidth, sourceHeight);
             return new LandmarkFrame(Instant.now(), points);
         }
     }
 
+    /**
+     * Draws {@code region} of the frame into the square the model expects.
+     *
+     * <p>The region is scaled uniformly rather than stretched to fit: a
+     * stretched body has wrong joint angles, and a ninety-degree knee can read
+     * as a hundred. Whatever part of the region lies outside the frame is left
+     * as padding, which is what lets the region sit half off the edge and still
+     * hold a body standing there.
+     */
+    static byte[] render(Mat bgrFrame, PersonCrop.Region region, int side) {
+        double scale = side / region.size();
+        var rgb = new Mat();
+        Imgproc.cvtColor(bgrFrame, rgb, Imgproc.COLOR_BGR2RGB);
+        var canvas = new Mat(side, side, rgb.type(), PAD);
+
+        // The part of the region that is actually in the frame.
+        int left = (int) Math.max(0, Math.floor(region.x()));
+        int top = (int) Math.max(0, Math.floor(region.y()));
+        int right = (int) Math.min(bgrFrame.width(), Math.ceil(region.x() + region.size()));
+        int bottom = (int) Math.min(bgrFrame.height(), Math.ceil(region.y() + region.size()));
+        if (right > left && bottom > top) {
+            int x = clampToCanvas((int) Math.round((left - region.x()) * scale), side);
+            int y = clampToCanvas((int) Math.round((top - region.y()) * scale), side);
+            int width = Math.min(side - x, Math.max(1, (int) Math.round((right - left) * scale)));
+            int height = Math.min(side - y, Math.max(1, (int) Math.round((bottom - top) * scale)));
+            if (width > 0 && height > 0) {
+                var patch = rgb.submat(top, bottom, left, right);
+                var scaled = new Mat();
+                Imgproc.resize(patch, scaled, new Size(width, height));
+                scaled.copyTo(canvas.submat(y, y + height, x, x + width));
+                scaled.release();
+                patch.release();
+            }
+        }
+
+        var pixels = new byte[(int) (canvas.total() * canvas.channels())];
+        canvas.get(0, 0, pixels);
+        rgb.release();
+        canvas.release();
+        return pixels;
+    }
+
+    private static int clampToCanvas(int value, int side) { return Math.min(side - 1, Math.max(0, value)); }
+
     /** MoveNet has no hand or toe keypoint, so continue the limb past its last joint. */
-    private static void extend(EnumMap<LandmarkName, Landmark> points, LandmarkName from, LandmarkName through, LandmarkName tip) {
+    private static void extend(EnumMap<LandmarkName, Landmark> points, LandmarkName from, LandmarkName through, LandmarkName tip, double lowest) {
         var a = points.get(from);
         var b = points.get(through);
         if (a == null || b == null) return;
         double dx = b.x() - a.x(), dy = b.y() - a.y();
         double length = Math.max(.001, Math.hypot(dx, dy));
-        points.put(tip, new Landmark(clamp(b.x() + dx / length * EXTENSION), clamp(b.y() + dy / length * EXTENSION), b.confidence()));
+        points.put(tip, new Landmark(clamp(b.x() + dx / length * EXTENSION, 1),
+                clamp(b.y() + dy / length * EXTENSION, lowest), b.confidence()));
     }
 
-    private static double clamp(double value) { return Math.min(1, Math.max(0, value)); }
+    private static double clamp(double value, double highest) { return Math.min(highest, Math.max(0, value)); }
 
     /** Builds the input tensor in whatever dtype this particular export declared. */
     private OnnxTensor buildTensor(byte[] pixels, long[] shape) throws Exception {

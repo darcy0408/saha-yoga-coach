@@ -67,6 +67,18 @@ tasks.register<JavaExec>("coverSnapshot") {
     jvmArgs("--enable-preview", "--enable-native-access=ALL-UNNAMED")
 }
 
+tasks.register<JavaExec>("visionBench") {
+    group = "verification"
+    description = "Times what one camera frame costs the capture thread, at 640x480 and 1280x960"
+    classpath = sourceSets.main.get().runtimeClasspath
+    mainClass = "io.saha.yoga.vision.VisionBenchLauncher"
+    jvmArgs("--enable-preview", "--enable-native-access=ALL-UNNAMED")
+    // gradlew visionBench "-PbenchModel=models/movenet-singlepose-thunder.onnx"
+    // to time a candidate model instead of the one the locator would choose.
+    // (Not named "model": Gradle itself owns a project property of that name.)
+    if (project.hasProperty("benchModel")) systemProperty("saha.model", project.property("benchModel") as String)
+}
+
 tasks.register<JavaExec>("cameraCheck") {
     group = "verification"
     description = "Reports which camera devices and backends this machine can actually open and read"

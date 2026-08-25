@@ -14,4 +14,18 @@ public record CameraFrame(int width, int height, byte[] bgra) {
     }
 
     @Override public byte[] bgra() { return bgra.clone(); }
+
+    /**
+     * The frame's own pixels, for reading only. Never write into this array.
+     *
+     * <p>{@link #bgra()} hands out a copy so that a caller holding a frame
+     * cannot have it changed underneath them, and that is the right default.
+     * But every frame is already copied once out of OpenCV and once more by the
+     * constructor, and the two consumers on the live path - the estimator and
+     * the preview - only ever read. Copying for them as well put four copies of
+     * every frame through the collector, which at a useful capture size is
+     * hundreds of megabytes a second and shows up as stutter in a coach that
+     * has to keep time.
+     */
+    public byte[] bgraView() { return bgra; }
 }
