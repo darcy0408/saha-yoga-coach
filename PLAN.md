@@ -1,6 +1,95 @@
 # Saha delivery plan
 
-Last updated: 2026-08-20
+Last updated: 2026-08-24
+
+## This session (2026-08-24)
+
+Everything that could move without a body in front of the camera, so that the
+one session needing a body answers everything at once.
+
+- **A diagnostics view for that session.** A "Diagnostics" button on the camera
+  practice screen (absent in demo mode) shows the raw per-joint scores the
+  model reports before smoothing - shoulders, hips, wrists, knees, ankles,
+  left|right - plus the crop region, per-frame cost, and the landmark rate the
+  pipeline sustains. In the camera-picture view the crop draws itself as a
+  gold dashed box: hunting, clipping a limb, or collapsing are visible at a
+  glance; no box means the model is seeing the whole frame. The readout is
+  deliberately unsmoothed - judging the model through the smoother would
+  measure the smoother. Vision plumbing is tested
+  (`diagnosticsReportTheRegionTheModelWasActuallyShown`); the JavaFX layer
+  compiles but no automation renders the coach screen, same as the rest of it.
+- **`gradlew visionBench` answers the frame-rate question a machine can
+  answer.** Median per-frame estimate cost, whole-frame path: Lightning ~8 ms
+  at 640x480 and ~11 ms at 1280x960; the copy `CameraFrame` takes on
+  construction is 0.1-0.5 ms. The capture-size increase costs ~3 ms against a
+  33 ms budget at 30 fps: **capture size will not be the bottleneck on this
+  machine.** What the bench cannot answer is tracking quality - that stays
+  with the live session.
+- **The MoveNet Thunder candidate is verified as far as a machine alone can.**
+  Same converter and packaging as the Lightning export (Apache-2.0); SHA-256
+  pinned in `scripts/fetch-model.ps1 -Thunder` and matching Hugging Face's own
+  LFS manifest; loads in ONNX Runtime, declares 256x256, decodes through the
+  production path in range (a test that skips when the candidate is absent);
+  ~25/29 ms per frame - affordable at 30 fps, little headroom. **Not enabled
+  and cannot be enabled by accident**: the locator only finds Lightning by
+  name; Thunder takes the `saha.model` property, deliberately, after a
+  real-body validation. `visionBench -PbenchModel=...` times any candidate.
+- **The docs sweep found the pipeline claims were the smaller problem.**
+  `docs/architecture.md` and `docs/final-report.md` still described the phase
+  before live inference existed - "a future live landmark adapter", "no model
+  bundled", "no TTS", 37 tests - and both claimed camera capture runs on a
+  virtual thread when `OpenCvCameraCapture` deliberately uses a platform
+  thread (blocking native calls pin a virtual carrier). The same false
+  virtual-thread claim sat in `docs/contest-submission-draft.md` and is
+  corrected there too; any copy of that draft published elsewhere would need
+  the same correction. Both docs rewritten to current truth; the architecture
+  diagram's gate said 0.70 against its own text's 0.35.
+- **A threshold error introduced into the model card on 2026-08-23, fixed.**
+  Yesterday's edit said the analyzer returns Unreliable below 0.30; the
+  analyzer's gate is 0.35 (`PoseAnalyzer.RELIABILITY_THRESHOLD`), and 0.30 is
+  the drawing/geometry threshold. The card now states both numbers and what
+  each governs.
+- **`lets-dance` updated rather than ported into.** It has no vision pipeline
+  yet (scaffold only), so its PLAN.md now records that the crop landed in Saha
+  first, what a port must keep (hip-centred sizing, the 1.9x torso floor, the
+  whole-frame snap-back) and what it must revisit (`FOLLOW = .5` assumes a
+  body holding still - a travelling step could outrun its own crop). Its open
+  question about backport direction is resolved: the port flows from Saha.
+
+## This session (2026-08-23)
+
+Step 1 of the vision audit, the fix both open symptoms were traced to: the model
+is no longer shown the whole letterboxed frame.
+
+- **`PersonCrop` chooses a square patch around the person** from the previous
+  frame's answer, which is what MoveNet's own reference pipeline does and this
+  code never did. The region is centred on the hips - the middle of a standing
+  body's vertical extent - and sized at 1.9x the torso or 1.2x the joints
+  actually seen, whichever is larger. Losing the torso resets to the whole
+  frame; the region eases rather than jumps, so the framing the model sees does
+  not change under it every frame.
+- **Centring it anywhere but the hips does not work**, which the tests caught
+  rather than review. Centred on the middle of the torso - a third of the way up
+  the body - a region that reaches the feet must reach as far above the head,
+  and it swells back to the whole frame. That is where the reference's 1.9
+  comes from, and it only holds measured from the hips.
+- **The crop cannot starve a limb it has already lost.** A region sized only
+  from confidently-seen joints would close around the torso of a cross-legged
+  body, put the faint legs outside the patch, and measure the next region from a
+  body with no legs at all. The torso factor exists to stop exactly that, and a
+  test asserts legs scoring 0.12 stay inside the region.
+- **Capture now negotiates the largest 4:3 mode the device offers**, verified
+  against a real frame rather than trusted: `gradlew cameraCheck` reports camera
+  0 sending **1280x960**, where it defaulted to 640x480 before. 4:3 is deliberate
+  - the device also offers 1920x1080 and 1280x720, and widescreen would trade
+  away the vertical view a standing body needs.
+- **Frames are copied twice rather than four times.** `CameraFrame` cloned its
+  payload on construction and again on every read, and the two live consumers
+  only read. At 1280x960 the old path would have put roughly 590 MB/s through
+  the collector, which in a coach that keeps time shows up as stutter.
+- **Nothing is reported below the bottom of the picture any more.** A keypoint
+  predicted into the letterbox padding used to map to y as far as 0.875 on a
+  frame whose floor is 0.75.
 
 ## Completed
 
@@ -100,6 +189,25 @@ strict threshold.
 
 ## Verification
 
+`./gradlew.bat clean test --no-build-cache --rerun-tasks` on Temurin 26.0.1,
+2026-08-24: **123 tests, 0 failures, 0 skipped** (24 classes, with the Lightning
+model and the Thunder candidate both present so every estimator fixture runs
+rather than skips; a clone without the optional Thunder file runs 122, skips 1). The flags are not decoration: with the
+build cache on, `clean test` returns `:test FROM-CACHE` in under a second without
+executing anything, which is easily mistaken for a passing run.
+`git diff --check` clean. `gradlew cameraCheck`: camera 0 opens on DirectShow and
+delivers 1280x960 to the production capture class.
+
+**What the 19 new tests do and do not cover.** The crop geometry is tested
+without a model, and the image transform - what the model is actually shown, and
+whether a point in it maps back to where it came from - is tested without one
+too, so both run on a clone that has never fetched weights. What no test reaches
+is the real model on a real cropped body: synthetic noise scores every joint
+below the gate, so the model-backed fixtures only ever exercise the whole-frame
+fallback, and the repo has no photograph of a person to feed it. **Whether the
+crop actually recovers overhead wrists and seated legs is unverified and can
+only be settled by a live camera.**
+
 `./gradlew.bat clean test` on Temurin 26.0.1, 2026-08-20: **102 tests, 0 failures**
 (counted from `build/test-results/test/TEST-*.xml`, 22 classes, with the model
 present so the estimator fixtures run rather than skip).
@@ -115,17 +223,28 @@ sank the previous attempt.
 
 ## Next
 
-1. Feed the model a crop centred on the person instead of the whole letterboxed
-   frame, and capture above 640×480. The 2026-08-20 audit traced both open
-   symptoms — wrists lost overhead, legs unseen while seated — largely to the
-   body spanning only ~144 of the input's 192 pixels. Crop around the previous
-   frame's keypoints with a generous margin, fall back to the full frame when
-   tracking is lost, and re-test both symptoms before touching any angle range.
-   MoveNet Thunder (256 px) is the follow-up if the crop alone is not enough.
-2. Watch the faint seated legs on a live camera. If they sit still, this is done and
-   the crop above will firm them up further; if they crawl, the damping is too weak,
-   and the next lever is to draw a low-confidence limb only once its position has
-   actually settled - a variance gate - rather than reverting the fade again.
+1. **Stand in front of the camera.** One session with a body in frame now settles
+   four open questions at once, and nothing else here should move until it does.
+   Press **Diagnostics: on** during it - the readout and the gold crop box were
+   built for exactly this - and switch to "View: camera picture" to see the box:
+   - Do wrists survive overhead, and do seated legs score above the gate? These
+     are what the crop was built for, and neither has been observed.
+   - Do the faint seated legs sit still or crawl? Outstanding from 2026-08-20 and
+     still verified only in a snapshot, which cannot show jitter. If they crawl,
+     the next lever is a variance gate - draw a low-confidence limb only once its
+     position has settled - not another revert of the fade.
+   - Does the crop hold on a real body, or does it hunt, clip a limb, or drop
+     back to the whole frame repeatedly? Constant resets mean the torso gate is
+     too strict; a clipped limb means the margins are too tight.
+   - Does 1280x960 cost noticeable frame rate on this laptop? Half answered by
+     `visionBench` on 2026-08-24: the pipeline's own cost is ~11 ms per frame,
+     well inside a 30 fps budget, so any stutter seen live would come from
+     somewhere else (camera delivery, preview drawing) - the diagnostics
+     readout shows the sustained rate to check against.
+2. Re-check the angle ranges afterwards. They were tuned against a starved model,
+   so a better-fed one may read the same pose differently. Do not touch a range
+   before step 1. MoveNet Thunder (256 px) is the follow-up if the crop was not
+   enough.
 3. Validate each measured pose against people actually holding it, across varied
    bodies, rooms and lighting.
 4. Record the demonstration video.
