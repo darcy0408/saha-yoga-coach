@@ -222,7 +222,7 @@ public final class SahaApp extends Application {
         // this screen used to claim "the pose model is not connected yet"
         // whether the weights were absent or present and broken.
         cameraStatus.setText(modelFallbackReason);
-        cameraCapture = new OpenCvCameraCapture(deviceIndex);
+        cameraCapture = CameraCapture.forDevice(deviceIndex);
         cameraCapture.start(this::showCameraFrame,
                 message -> Platform.runLater(() -> cameraStatus.setText(message)),
                 message -> Platform.runLater(() -> {

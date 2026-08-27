@@ -36,6 +36,12 @@ application {
 }
 
 tasks.withType<JavaCompile>().configureEach { options.compilerArgs.add("--enable-preview") }
+// gradlew run "-Pvideo=C:\clips\practice.mp4" drives the whole application -
+// calibration preview, practice, diagnostics - from a recorded clip, looping,
+// in place of the camera. See CameraCapture.forDevice.
+tasks.named<JavaExec>("run") {
+    if (project.hasProperty("video")) systemProperty("saha.video", project.property("video") as String)
+}
 tasks.test {
     useJUnitPlatform()
     jvmArgs("--enable-preview")
@@ -77,6 +83,21 @@ tasks.register<JavaExec>("visionBench") {
     // to time a candidate model instead of the one the locator would choose.
     // (Not named "model": Gradle itself owns a project property of that name.)
     if (project.hasProperty("benchModel")) systemProperty("saha.model", project.property("benchModel") as String)
+}
+
+tasks.register<JavaExec>("videoCheck") {
+    group = "verification"
+    description = "Runs a recorded clip through the production vision pipeline and reports per-joint scores, the crop, and cost"
+    classpath = sourceSets.main.get().runtimeClasspath
+    mainClass = "io.saha.yoga.vision.VideoCheckLauncher"
+    jvmArgs("--enable-preview", "--enable-native-access=ALL-UNNAMED")
+    // gradlew videoCheck "-Pvideo=C:\clips\practice.mp4" — the clip stays where
+    // it lies; nothing is copied into the repository, whose sample-data policy
+    // forbids committing video of people.
+    if (project.hasProperty("video")) args(project.property("video") as String)
+    // "-PvideoModel=models/movenet-singlepose-thunder.onnx" to run the same
+    // clip through a candidate model for a side-by-side comparison.
+    if (project.hasProperty("videoModel")) systemProperty("saha.model", project.property("videoModel") as String)
 }
 
 tasks.register<JavaExec>("cameraCheck") {

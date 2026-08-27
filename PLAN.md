@@ -1,6 +1,40 @@
 # Saha delivery plan
 
-Last updated: 2026-08-24
+Last updated: 2026-08-26
+
+## This session (2026-08-26)
+
+The live camera session fell through - the one person available could not put
+weight on an injured hand, and most of the routine goes through the hands. What
+fell out of that is better than the session it replaced: recorded footage can
+now stand in front of the camera.
+
+- **`VideoFileCapture` plays a file through the same `CameraCapture` interface
+  the device uses**, chosen by `CameraCapture.forDevice` when the `saha.video`
+  property names a clip. Nothing downstream is told the difference: the
+  estimator, the person crop, the smoother, the analyzer and the diagnostics
+  view all run on recorded frames exactly as they would on live ones. The end
+  of a finite clip is a status, not a failure; looping playback (for the GUI)
+  survives a container that refuses to seek by reopening the file.
+- **`gradlew videoCheck "-Pvideo=path\to\clip.mp4"` answers the live-session
+  questions from a recording** - one summary line per second of video (wrist,
+  knee and ankle raw scores, wrists-above-nose, crop size), per-joint
+  above-the-gate fractions against the analyzer's 0.35, crop reset counts, and
+  a per-frame CSV under `build/review/` for anything finer.
+  `-PvideoModel=...` runs the same clip through a candidate model, which is
+  how Thunder gets its side-by-side when a real clip exists.
+- **Verified as far as a machine alone can, which this time is almost all the
+  way**: four new tests cover playback, the end-of-clip path, looping, the
+  missing-file failure and the factory (the clip they read is synthesized
+  colour bars - the sample-data policy forbids committing video of people, and
+  clips for the property likewise stay outside the repository). End to end,
+  `videoCheck` on an ffmpeg test pattern decoded 90 frames through the
+  production pipeline at 8.0 ms median - the bench's own number - with the
+  crop correctly never leaving the whole frame, there being no person to find.
+- **What a machine still cannot supply is the clip itself.** No footage of a
+  person has been run yet; the four questions from 2026-08-24 stay open until
+  one is. The GUI path (`gradlew run "-Pvideo=..."`) compiles and shares the
+  factory, but nobody has clicked through it.
 
 ## This session (2026-08-24)
 
@@ -189,6 +223,10 @@ strict threshold.
 
 ## Verification
 
+`./gradlew.bat test --no-build-cache --rerun-tasks` on Temurin 26.0.1,
+2026-08-26: **127 tests, 0 failures, 0 skipped** (25 classes; the four new ones
+exercise `VideoFileCapture` against a clip synthesized in the test itself).
+
 `./gradlew.bat clean test --no-build-cache --rerun-tasks` on Temurin 26.0.1,
 2026-08-24: **123 tests, 0 failures, 0 skipped** (24 classes, with the Lightning
 model and the Thunder candidate both present so every estimator fixture runs
@@ -223,7 +261,10 @@ sank the previous attempt.
 
 ## Next
 
-1. **Stand in front of the camera.** One session with a body in frame now settles
+1. **Put a body in front of the camera - live, or recorded.** A clip of a
+   person through `gradlew videoCheck` (or the whole app via
+   `gradlew run "-Pvideo=..."`) now answers the same questions as a live
+   session, repeatably. One session with a body in frame settles
    four open questions at once, and nothing else here should move until it does.
    Press **Diagnostics: on** during it - the readout and the gold crop box were
    built for exactly this - and switch to "View: camera picture" to see the box:

@@ -66,7 +66,7 @@ public final class CameraLandmarkSource implements LandmarkSource {
         if (model.isEmpty()) return new Startup.NoModel(PoseModelLocator.candidates());
         var path = model.get();
         try {
-            return new Startup.Ready(new CameraLandmarkSource(new OpenCvCameraCapture(deviceIndex), new PoseEstimator(path)), path);
+            return new Startup.Ready(new CameraLandmarkSource(CameraCapture.forDevice(deviceIndex), new PoseEstimator(path)), path);
         } catch (Throwable error) {
             // Throwable, not Exception: a missing native library arrives as an
             // UnsatisfiedLinkError, which is exactly the case worth reporting.
