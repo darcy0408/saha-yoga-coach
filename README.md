@@ -4,7 +4,7 @@ Saha is a Java 26 desktop application that guides an approximately 20-minute yog
 
 ## Competition relevance
 
-Built for Hackster.io's **Modern Java in the Wild**, Saha targets Best Home Solution and Best in Show. Java owns the UI, routine engine, landmark geometry, coaching policy, personalization, and local persistence. The memorable judge path works without special hardware through deterministic demonstration landmarks.
+Built for Hackster.io's **Modern Java in the Wild** and entered under Best Home Solution and Best in Show. Java owns the UI, routine engine, landmark geometry, coaching policy, personalization, and local persistence. The memorable judge path works without special hardware through deterministic demonstration landmarks.
 
 ## The problem
 
@@ -26,7 +26,7 @@ Home yoga videos cannot notice when someone leaves the frame, needs a gentler op
 - Poses without implemented measurements explicitly say "instruction only" rather than implying alignment was checked.
 - At most two supportive, observable cues at once; timer pauses when confidence is low.
 - Pause, repeat, skip, easier-option, and always-visible immediate-stop controls.
-- Derived-only JSON session history, explainable rule-based personalization, and full deletion.
+- Local JSON session history (pose, time, seconds held, skipped), explainable rule-based personalization, and full deletion. The stability and confidence figures in that history are placeholder constants, not measurements, until MT-001 in `PLAN.md` is done.
 - Automated geometry, confidence, routine, personalization, and persistence tests.
 
 With the verified model in place, the camera drives coaching: landmarks are estimated on this device, drawn over the mirrored video, and passed through the same confidence gate and alignment rules. Without it the app falls back to synthetic demo landmarks and says so on screen. It also falls back rather than crashing or going blank when camera access fails.
@@ -79,7 +79,7 @@ Tests do not need a camera or person. Fixtures contain synthetic normalized land
 
 ## Privacy and safety
 
-Normal operation saves no video, images, face data, landmark coordinates, identity, emotion, age, body shape, or appearance scores. Derived pose metrics are written to `~/.saha/sessions.json`; the progress page can delete them. Saha does not upload data. Stop for pain, dizziness, numbness, weakness, or unusual discomfort. See [privacy and safety](docs/privacy-and-safety.md).
+Normal operation saves no video, images, face data, landmark coordinates, identity, emotion, age, body shape, or appearance scores. Per-pose session records are written to `~/.saha/sessions.json`; the progress page can delete them. Saha does not upload data. Stop for pain, dizziness, numbness, weakness, or unusual discomfort. See [privacy and safety](docs/privacy-and-safety.md).
 
 ## Known limitations
 
@@ -100,7 +100,7 @@ Run the app, explain local-only processing on onboarding, show calibration/demo 
 
 ## Future improvements
 
-Validate and ship a licensed MoveNet ONNX artifact first. Then add live OpenCV capture, adaptive inference frequency, local speech, keyboard/screen-reader testing, richer stability trends, and additional routine modes. Multi-camera, wearable, and voice features remain optional until the core coach is validated with diverse users.
+Measure the session metrics the progress page reports (MT-001), then adaptive inference frequency, keyboard/screen-reader testing, richer stability trends, and additional routine modes. Multi-camera and wearable features remain optional until the core coach is validated with diverse users.
 
 ## License
 
